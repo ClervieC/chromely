@@ -104,9 +104,9 @@ export default function WishlistPage() {
     }
   }
 
-  async function handleConvert(values) {
+  async function handleConvert(entries) {
     try {
-      await addFeutre(values);
+      await addFeutre(Array.isArray(entries) ? entries[0] : entries);
       await removeWish(convertModal.item.id);
       toast.success("Ajouté au stock, envie retirée de la liste");
       setConvertModal(null);

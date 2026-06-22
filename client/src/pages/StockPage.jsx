@@ -3,7 +3,7 @@ import { Plus, Layers, Search, LayoutGrid } from "lucide-react";
 import { useData } from "../context/DataContext.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { ETATS } from "../data.js";
-import { FeutreCard, EmptyState, Modal } from "../components/ui.jsx";
+import { FeutreCard, EmptyState, Modal, Field } from "../components/ui.jsx";
 import { FeutreForm } from "../components/FeutreForm.jsx";
 import { PackForm } from "../components/PackForm.jsx";
 
@@ -107,12 +107,12 @@ export default function StockPage() {
     etat: "all",
     sort: "recent",
   });
-  const [feutreModal, setFeutreModal] = useState(null); // { initial }
+  const [feutreModal, setFeutreModal] = useState(null);
   const [packModalOpen, setPackModalOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const marquesPresentes = useMemo(
-    () => [...new Set(feutres.map((f) => f.marque))],
+    () => [...new Set(feutres.map((f) => f.marque).filter(Boolean))],
     [feutres],
   );
   const filtered = useMemo(
@@ -120,13 +120,15 @@ export default function StockPage() {
     [feutres, filters],
   );
 
-  async function handleSubmitFeutre(values) {
+  async function handleSubmitFeutre(entries) {
     try {
       if (feutreModal.initial) {
-        await editFeutre(feutreModal.initial.id, values);
+        // Première entrée met à jour l'existant, les suivantes (états différents) sont créées
+        await editFeutre(feutreModal.initial.id, entries[0]);
+        for (const entry of entries.slice(1)) await addFeutre(entry);
         toast.success("Feutre mis à jour");
       } else {
-        await addFeutre(values);
+        await addFeutre(entries[0]);
         toast.success("Feutre ajouté");
       }
       setFeutreModal(null);
@@ -226,6 +228,7 @@ export default function StockPage() {
             title={feutreModal.initial ? "Enregistrer" : "Ajouter au stock"}
             palette={palette}
             customPacks={customPacks}
+            feutres={feutres}
           />
         </Modal>
       )}

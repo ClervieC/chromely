@@ -43,8 +43,11 @@ export function DataProvider({ children }) {
   // --- Feutres ---
   async function addFeutre(values) {
     const { feutre } = await api.createFeutre(values);
-    setFeutres((prev) => [feutre, ...prev]);
-    if (values.hex && values.numero && values.pack) refreshPaletteOnly();
+    setFeutres((prev) =>
+      prev.some((f) => f.id === feutre.id)
+        ? prev.map((f) => (f.id === feutre.id ? feutre : f))
+        : [feutre, ...prev]
+    );
     return feutre;
   }
   async function editFeutre(id, values) {

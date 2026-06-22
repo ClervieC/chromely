@@ -110,11 +110,6 @@ export function FeutreCard({ f, onEdit, onDelete }) {
         {f.nom && <div className="feutre-nom">{f.nom}</div>}
         <div className="feutre-tags">
           {f.quantite > 1 && <Tag color="#7C5CBF">×{f.quantite}</Tag>}
-          {!f.compare && (
-            <Tag color="#2F8F9D" outline>
-              à comparer
-            </Tag>
-          )}
           {f.etat !== "fonctionne" && (
             <Tag color={etat.color}>{etat.label}</Tag>
           )}

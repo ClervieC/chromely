@@ -12,6 +12,7 @@
     "build": "npm run install:client && cd client && npm run build",
     "start": "node server/index.js",
     "dev:server": "node server/index.js",
+    "dev:mock": "node server/mock.js",
     "dev:client": "cd client && npm run dev"
   },
   "dependencies": {

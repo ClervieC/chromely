@@ -34,7 +34,6 @@ export default function DashboardPage() {
       totalRef: feutres.length,
       parMarque,
       doublons: feutres.filter((f) => f.quantite > 1).length,
-      aComparer: feutres.filter((f) => !f.compare).length,
       panne: feutres.filter((f) => f.etat !== "fonctionne").length,
       envies: wishlist.length,
     };
@@ -50,9 +49,9 @@ export default function DashboardPage() {
       </div>
     );
 
-  async function handleAddFeutre(values) {
+  async function handleAddFeutre(entries) {
     try {
-      await addFeutre(values);
+      await addFeutre(entries[0]);
       toast.success("Feutre ajouté à ton stock");
       setFeutreModalOpen(false);
     } catch (e) {
@@ -135,12 +134,6 @@ export default function DashboardPage() {
           </span>
           <span className="stat-label">en double</span>
         </button>
-        <button className="stat-card" onClick={() => navigate("/comparer")}>
-          <span className="stat-number display" style={{ color: "#2F8F9D" }}>
-            {stats.aComparer}
-          </span>
-          <span className="stat-label">à comparer</span>
-        </button>
         <button className="stat-card" onClick={() => navigate("/panne")}>
           <span className="stat-number display" style={{ color: "#C1452D" }}>
             {stats.panne}
@@ -190,6 +183,7 @@ export default function DashboardPage() {
             title="Ajouter au stock"
             palette={palette}
             customPacks={customPacks}
+            feutres={feutres}
           />
         </Modal>
       )}

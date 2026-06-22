@@ -15,8 +15,6 @@ function toApi(row) {
     hex: row.hex,
     quantite: row.quantite,
     etat: row.etat,
-    compare: row.compare_done,
-    compareNotes: row.compare_notes,
     dateAchat: row.date_achat,
     prix: row.prix,
     notes: row.notes,
@@ -36,25 +34,42 @@ router.post("/", async (req, res) => {
   const f = req.body || {};
   if (!f.marque)
     return res.status(400).json({ error: "La marque est requise." });
-  const result = await pool.query(
-    `INSERT INTO feutres (owner_id, marque, pack, numero, nom, hex, quantite, etat, compare_done, compare_notes, date_achat, prix, notes)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
-    [
-      req.user.id,
-      f.marque,
-      f.pack || null,
-      f.numero || null,
-      f.nom || null,
-      f.hex || null,
-      Math.max(1, Number(f.quantite) || 1),
-      f.etat || "fonctionne",
-      !!f.compare,
-      f.compareNotes || null,
-      f.dateAchat || null,
-      f.prix === "" || f.prix == null ? null : Number(f.prix),
-      f.notes || null,
-    ],
-  );
+  const etatNormalise = f.etat || "fonctionne";
+  let existingQuery;
+  if (f.pack && f.numero) {
+    existingQuery = await pool.query(
+      "SELECT * FROM feutres WHERE owner_id=$1 AND marque=$2 AND pack=$3 AND numero=$4 AND etat=$5 LIMIT 1",
+      [req.user.id, f.marque, f.pack, f.numero, etatNormalise],
+    );
+  } else {
+    existingQuery = { rows: [] };
+  }
+
+  let result;
+  if (existingQuery.rows.length > 0) {
+    const qty = existingQuery.rows[0].quantite + Math.max(1, Number(f.quantite) || 1);
+    result = await pool.query(
+      "UPDATE feutres SET quantite=$1 WHERE id=$2 RETURNING *",
+      [qty, existingQuery.rows[0].id],
+    );
+  } else {
+    result = await pool.query(
+      `INSERT INTO feutres (owner_id, marque, pack, numero, nom, hex, quantite, etat, date_achat, notes)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [
+        req.user.id,
+        f.marque,
+        f.pack || null,
+        f.numero || null,
+        f.nom || null,
+        f.hex || null,
+        Math.max(1, Number(f.quantite) || 1),
+        f.etat || "fonctionne",
+        f.dateAchat || null,
+        f.notes || null,
+      ],
+    );
+  }
 
   // Apprentissage automatique de la palette partagée, réservé à l'admin.
   if (req.user.role === "admin" && f.hex && f.numero && f.pack) {
@@ -73,8 +88,8 @@ router.put("/:id", async (req, res) => {
   const f = req.body || {};
   const result = await pool.query(
     `UPDATE feutres SET marque=$1, pack=$2, numero=$3, nom=$4, hex=$5, quantite=$6, etat=$7,
-       compare_done=$8, compare_notes=$9, date_achat=$10, prix=$11, notes=$12
-     WHERE id=$13 AND owner_id=$14 RETURNING *`,
+       date_achat=$8, prix=$9, notes=$10
+     WHERE id=$11 AND owner_id=$12 RETURNING *`,
     [
       f.marque,
       f.pack || null,
@@ -83,8 +98,6 @@ router.put("/:id", async (req, res) => {
       f.hex || null,
       Math.max(1, Number(f.quantite) || 1),
       f.etat || "fonctionne",
-      !!f.compare,
-      f.compareNotes || null,
       f.dateAchat || null,
       f.prix === "" || f.prix == null ? null : Number(f.prix),
       f.notes || null,
@@ -157,8 +170,8 @@ router.post("/bulk-pack", async (req, res) => {
       const match = paletteByNumero.get(numero);
       if (match) matched++;
       await pool.query(
-        `INSERT INTO feutres (owner_id, marque, pack, numero, nom, hex, quantite, etat, compare_done, date_achat, notes)
-         VALUES ($1,$2,$3,$4,$5,$6,1,'fonctionne',false,$7,$8)`,
+        `INSERT INTO feutres (owner_id, marque, pack, numero, nom, hex, quantite, etat, date_achat, notes)
+         VALUES ($1,$2,$3,$4,$5,$6,1,'fonctionne',$7,$8)`,
         [
           req.user.id,
           marque,

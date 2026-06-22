@@ -8,7 +8,6 @@ import RegisterPage from "./pages/RegisterPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import StockPage from "./pages/StockPage.jsx";
 import DoublonsPage from "./pages/DoublonsPage.jsx";
-import ComparerPage from "./pages/ComparerPage.jsx";
 import PannePage from "./pages/PannePage.jsx";
 import WishlistPage from "./pages/WishlistPage.jsx";
 import PalettePage from "./pages/PalettePage.jsx";
@@ -36,7 +35,6 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="stock" element={<StockPage />} />
         <Route path="doublons" element={<DoublonsPage />} />
-        <Route path="comparer" element={<ComparerPage />} />
         <Route path="panne" element={<PannePage />} />
         <Route path="envies" element={<WishlistPage />} />
         <Route path="palette" element={<PalettePage />} />

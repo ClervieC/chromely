@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useData } from "../context/DataContext.jsx";
 import { useToast } from "./Toast.jsx";
-import { FeutreCard, EmptyState, Modal } from "./ui.jsx";
+import { FeutreCard, EmptyState, Modal, Field } from "./ui.jsx";
 import { FeutreForm } from "./FeutreForm.jsx";
+import { ETATS } from "../data.js";
 
 export function FilteredFeutresView({
   title,
@@ -12,16 +13,17 @@ export function FilteredFeutresView({
   emptyTitle,
   emptyText,
 }) {
-  const { feutres, palette, customPacks, editFeutre, removeFeutre } = useData();
+  const { feutres, palette, customPacks, addFeutre, editFeutre, removeFeutre } = useData();
   const toast = useToast();
   const [feutreModal, setFeutreModal] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const list = feutres.filter(filterFn);
 
-  async function handleSubmitFeutre(values) {
+  async function handleSubmitFeutre(entries) {
     try {
-      await editFeutre(feutreModal.initial.id, values);
+      await editFeutre(feutreModal.initial.id, entries[0]);
+      for (const entry of entries.slice(1)) await addFeutre(entry);
       toast.success("Feutre mis à jour");
       setFeutreModal(null);
     } catch (e) {
@@ -75,6 +77,7 @@ export function FilteredFeutresView({
             title="Enregistrer"
             palette={palette}
             customPacks={customPacks}
+            feutres={feutres}
           />
         </Modal>
       )}

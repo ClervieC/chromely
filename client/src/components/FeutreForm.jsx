@@ -1,31 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
-import { MARQUES, ETATS, mergedPackNames, paletteKey } from "../data.js";
+import { useMemo, useState } from "react";
+import { MARQUES, ETATS, mergedPackNames, paletteKey, MARQUES_NUMERO_UNIVERSEL } from "../data.js";
 import { Field } from "./ui.jsx";
 
-export function FeutreForm({
-  initial,
-  onCancel,
-  onSubmit,
-  title,
-  palette,
-  customPacks,
-}) {
+export function FeutreForm({ initial, onCancel, onSubmit, title, palette, customPacks, feutres }) {
+  const isEdit = !!initial?.id;
+  const qty = initial?.quantite || 1;
+
   const [marque, setMarque] = useState(initial?.marque || "GuangNa");
   const [marqueAutre, setMarqueAutre] = useState(
     initial && !MARQUES.includes(initial.marque) ? initial.marque : "",
   );
   const [pack, setPack] = useState(initial?.pack || "");
   const [numero, setNumero] = useState(initial?.numero || "");
-  const [nom, setNom] = useState(initial?.nom || "");
-  const [hex, setHex] = useState(initial?.hex || "");
-  const [quantite, setQuantite] = useState(initial?.quantite || 1);
+  const [quantite, setQuantite] = useState(qty);
   const [etat, setEtat] = useState(initial?.etat || "fonctionne");
-  const [compare, setCompare] = useState(initial?.compare || false);
-  const [compareNotes, setCompareNotes] = useState(initial?.compareNotes || "");
+  // En mode édition avec plusieurs exemplaires : un état par exemplaire
+  const [etatsParExemplaire, setEtatsParExemplaire] = useState(
+    () => Array.from({ length: qty }, () => initial?.etat || "fonctionne")
+  );
   const [dateAchat, setDateAchat] = useState(
     initial?.dateAchat ? initial.dateAchat.slice(0, 10) : "",
   );
-  const [prix, setPrix] = useState(initial?.prix ?? "");
   const [notes, setNotes] = useState(initial?.notes || "");
   const [error, setError] = useState("");
 
@@ -45,68 +40,74 @@ export function FeutreForm({
       ? paletteMap[paletteKey(marqueFinale, pack.trim(), numero.trim())]
       : null;
 
-  useEffect(() => {
-    if (hex) return;
-    if (autoMatch && autoMatch.hex) {
-      setHex(autoMatch.hex);
-      if (!nom && autoMatch.nom) setNom(autoMatch.nom);
+  const doublonsAutresPacks = useMemo(() => {
+    if (!feutres || !numero.trim()) return [];
+    const numeroUniversel = MARQUES_NUMERO_UNIVERSEL.includes(marqueFinale);
+    if (numeroUniversel) {
+      return feutres.filter(
+        (f) =>
+          f.marque === marqueFinale &&
+          f.numero === numero.trim() &&
+          f.pack !== pack.trim() &&
+          f.id !== initial?.id,
+      );
+    } else {
+      if (!autoMatch?.hex) return [];
+      const hex = autoMatch.hex.toLowerCase();
+      return feutres.filter(
+        (f) =>
+          f.marque === marqueFinale &&
+          f.hex?.toLowerCase() === hex &&
+          !(f.pack === pack.trim() && f.numero === numero.trim()) &&
+          f.id !== initial?.id,
+      );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [numero, pack, marqueFinale]);
+  }, [autoMatch, feutres, marqueFinale, pack, numero, initial]);
+
+  function setEtatExemplaire(i, val) {
+    setEtatsParExemplaire((prev) => prev.map((e, idx) => (idx === i ? val : e)));
+  }
 
   function handleSubmit() {
-    if (!numero.trim() && !nom.trim()) {
-      setError(
-        "Renseigne au moins un numéro ou un nom de couleur pour identifier ce feutre.",
-      );
+    if (!numero.trim()) {
+      setError("Renseigne le numéro du feutre.");
       return;
     }
-    onSubmit({
+    const base = {
       marque: marqueFinale,
       pack: pack.trim(),
       numero: numero.trim(),
-      nom: nom.trim(),
-      hex,
-      quantite: Math.max(1, Number(quantite) || 1),
-      etat,
-      compare,
-      compareNotes: compareNotes.trim(),
+      nom: autoMatch?.nom || initial?.nom || null,
+      hex: autoMatch?.hex || initial?.hex || null,
       dateAchat: dateAchat || null,
-      prix: prix === "" ? "" : Number(prix),
       notes: notes.trim(),
-    });
+    };
+
+    if (isEdit && qty > 1) {
+      // Regroupe les exemplaires par état et retourne un tableau d'entrées
+      const groups = {};
+      etatsParExemplaire.forEach((e) => { groups[e] = (groups[e] || 0) + 1; });
+      const entries = Object.entries(groups).map(([e, q]) => ({ ...base, etat: e, quantite: q }));
+      onSubmit(entries);
+    } else {
+      onSubmit([{ ...base, etat, quantite: Math.max(1, Number(quantite) || 1) }]);
+    }
   }
 
   return (
     <>
       <div className="form-grid">
         <Field label="Marque">
-          <select
-            className="input"
-            value={marque}
-            onChange={(e) => setMarque(e.target.value)}
-          >
-            {MARQUES.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
+          <select className="input" value={marque} onChange={(e) => setMarque(e.target.value)}>
+            {MARQUES.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
         </Field>
         {marque === "Autre" && (
           <Field label="Nom de la marque">
-            <input
-              className="input"
-              value={marqueAutre}
-              onChange={(e) => setMarqueAutre(e.target.value)}
-              placeholder="Ex : Languo"
-            />
+            <input className="input" value={marqueAutre} onChange={(e) => setMarqueAutre(e.target.value)} placeholder="Ex : Languo" />
           </Field>
         )}
-        <Field
-          label="Pack"
-          hint="Sélectionne dans la liste ou écris ton propre pack"
-        >
+        <Field label="Pack" hint="Sélectionne dans la liste ou écris ton propre pack">
           <input
             className="input"
             list="pack-suggestions"
@@ -115,139 +116,85 @@ export function FeutreForm({
             placeholder="Ex : 240 couleurs"
           />
           <datalist id="pack-suggestions">
-            {suggestions.map((s) => (
-              <option key={s} value={s} />
-            ))}
+            {suggestions.map((s) => <option key={s} value={s} />)}
           </datalist>
         </Field>
-        <Field label="Numéro / code">
-          <input
-            className="input mono"
-            value={numero}
-            onChange={(e) => setNumero(e.target.value)}
-            placeholder="Ex : 042"
-          />
+        <Field label="Numéro">
+          <input className="input mono" value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex : 042" />
         </Field>
-        <Field label="Nom de la couleur (optionnel)">
-          <input
-            className="input"
-            value={nom}
-            onChange={(e) => setNom(e.target.value)}
-            placeholder="Ex : Bleu lagon"
-          />
-        </Field>
-        <Field label="Couleur (regarde ton feutre)">
-          <div className="color-row">
-            <input
-              type="color"
-              className="color-input"
-              value={hex || "#cccccc"}
-              onChange={(e) => setHex(e.target.value)}
-            />
-            <input
-              className="input mono"
-              value={hex}
-              onChange={(e) => setHex(e.target.value)}
-              placeholder="#RRGGBB"
-            />
-          </div>
-          {autoMatch?.hex &&
-            autoMatch.hex.toLowerCase() !== (hex || "").toLowerCase() && (
-              <button
-                type="button"
-                className="link-btn"
-                onClick={() => {
-                  setHex(autoMatch.hex);
-                  if (!nom && autoMatch.nom) setNom(autoMatch.nom);
-                }}
-              >
-                🎨 Couleur connue{autoMatch.nom ? ` « ${autoMatch.nom} »` : ""}{" "}
-                — cliquer pour l'utiliser
-              </button>
-            )}
-        </Field>
-        <Field label="Quantité possédée">
-          <input
-            type="number"
-            min="1"
-            className="input"
-            value={quantite}
-            onChange={(e) => setQuantite(e.target.value)}
-          />
-        </Field>
-        <Field label="État">
-          <select
-            className="input"
-            value={etat}
-            onChange={(e) => setEtat(e.target.value)}
-          >
-            {Object.entries(ETATS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-        </Field>
+
+        {/* En ajout : champ quantité + un seul état */}
+        {!isEdit && (
+          <>
+            <Field label="Quantité">
+              <input type="number" min="1" className="input" value={quantite} onChange={(e) => setQuantite(e.target.value)} />
+            </Field>
+            <Field label="État">
+              <select className="input" value={etat} onChange={(e) => setEtat(e.target.value)}>
+                {Object.entries(ETATS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </Field>
+          </>
+        )}
+
         <Field label="Date d'achat (optionnel)">
-          <input
-            type="date"
-            className="input"
-            value={dateAchat}
-            onChange={(e) => setDateAchat(e.target.value)}
-          />
-        </Field>
-        <Field label="Prix payé (optionnel)">
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            className="input"
-            value={prix}
-            onChange={(e) => setPrix(e.target.value)}
-            placeholder="€"
-          />
+          <input type="date" className="input" value={dateAchat} onChange={(e) => setDateAchat(e.target.value)} />
         </Field>
       </div>
 
-      <label className="checkbox-row">
-        <input
-          type="checkbox"
-          checked={compare}
-          onChange={(e) => setCompare(e.target.checked)}
-        />
-        <span>Déjà comparé à d'autres packs / marques</span>
-      </label>
-      {compare && (
-        <Field label="Résultat de la comparaison">
-          <textarea
-            className="input textarea"
-            value={compareNotes}
-            onChange={(e) => setCompareNotes(e.target.value)}
-            placeholder="Ex : identique au Tooli-Art Earth Tones n°14"
-          />
+      {/* En édition avec plusieurs exemplaires : un état par exemplaire */}
+      {isEdit && qty > 1 && (
+        <div className="field" style={{ marginTop: 12 }}>
+          <span className="field-label">État de chaque exemplaire ({qty})</span>
+          <div className="exemplaires-list">
+            {etatsParExemplaire.map((e, i) => (
+              <div key={i} className="exemplaire-row">
+                <span className="exemplaire-num">#{i + 1}</span>
+                <select className="input" value={e} onChange={(ev) => setEtatExemplaire(i, ev.target.value)}>
+                  {Object.entries(ETATS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* En édition avec un seul exemplaire : état simple */}
+      {isEdit && qty === 1 && (
+        <Field label="État">
+          <select className="input" value={etat} onChange={(e) => setEtat(e.target.value)}>
+            {Object.entries(ETATS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
         </Field>
       )}
-      <Field label="Notes">
-        <textarea
-          className="input textarea"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Toute remarque utile..."
-        />
+
+      {autoMatch && (
+        <div className="palette-match-hint">
+          <div className="palette-match-swatch" style={{ background: autoMatch.hex || "#ccc" }} />
+          <span>Couleur connue{autoMatch.nom ? ` — ${autoMatch.nom}` : ""} ({autoMatch.hex || "sans hex"})</span>
+        </div>
+      )}
+
+      {doublonsAutresPacks.length > 0 && (
+        <div className="doublon-warning">
+          <strong>Ce feutre existe déjà dans ton stock{autoMatch?.hex ? ` (${autoMatch.hex})` : ""} :</strong>
+          <ul>
+            {doublonsAutresPacks.map((f) => (
+              <li key={f.id}>{f.pack || "pack inconnu"} — n°{f.numero || "?"}{f.nom ? ` (${f.nom})` : ""} × {f.quantite}</li>
+            ))}
+          </ul>
+          <span>C'est peut-être le même feutre physique.</span>
+        </div>
+      )}
+
+      <Field label="Notes (optionnel)">
+        <textarea className="input textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Toute remarque utile..." />
       </Field>
 
       {error && <p className="form-error">{error}</p>}
       <div className="modal-actions">
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          Annuler
-        </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleSubmit}
-        >
-          {title}
-        </button>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>Annuler</button>
+        <button type="button" className="btn btn-primary" onClick={handleSubmit}>{title}</button>
       </div>
     </>
   );

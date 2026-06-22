@@ -54,6 +54,10 @@ export const CATALOGUE = {
 
 export const MARQUES = ["GuangNa", "Tooli-Art", "Nicety", "Autre"];
 
+// Marques où le numéro identifie la couleur de façon universelle, tous packs confondus.
+// Un GuangNa n°600 du pack 12 et du pack 240 sont le même feutre physique.
+export const MARQUES_NUMERO_UNIVERSEL = ["GuangNa"];
+
 export const BRAND_COLOR = {
   GuangNa: "#E1572C",
   "Tooli-Art": "#154B4A",

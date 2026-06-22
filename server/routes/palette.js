@@ -85,44 +85,36 @@ router.post("/bulk-import", requireAdmin, async (req, res) => {
   res.status(201).json({ count });
 });
 
-// Reconnaissance des couleurs depuis une photo, via l'API Claude (nécessite ANTHROPIC_API_KEY).
+// Reconnaissance des couleurs depuis une photo, via OpenRouter (nécessite OPENROUTER_API_KEY).
 router.post("/analyze-photo", requireAdmin, async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENROUTER_API_KEY) {
     return res.status(501).json({
       error:
-        "Fonctionnalité non configurée : ajoute la variable d'environnement ANTHROPIC_API_KEY pour l'activer.",
+        "Fonctionnalité non configurée : ajoute OPENROUTER_API_KEY dans ton .env. Clé gratuite sur https://openrouter.ai",
     });
   }
   const { base64, mediaType } = req.body || {};
   if (!base64) return res.status(400).json({ error: "Image manquante." });
 
+  const prompt =
+    'Tu vois une photo de feutres/marqueurs acryliques ou d\'un nuancier de couleurs. Pour chaque feutre ou case de couleur visible, identifie : le numéro ou code écrit s\'il y en a un, le nom de la couleur s\'il y en a un, et une estimation du code couleur hexadécimal d\'après ce que tu vois sur la photo. Réponds UNIQUEMENT avec un tableau JSON valide, sans aucun texte autour, sans balises markdown, au format exact : [{"numero":"1","nom":"","hex":"#RRGGBB"}]. Si un champ est inconnu, laisse une chaîne vide. Ne réponds rien d\'autre que ce tableau JSON.';
+
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: "qwen/qwen2-vl-7b-instruct:free",
         max_tokens: 2000,
         messages: [
           {
             role: "user",
             content: [
-              {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: mediaType || "image/jpeg",
-                  data: base64,
-                },
-              },
-              {
-                type: "text",
-                text: 'Tu vois une photo de feutres/marqueurs acryliques ou d\'un nuancier de couleurs. Pour chaque feutre ou case de couleur visible, identifie : le numéro ou code écrit s\'il y en a un, le nom de la couleur s\'il y en a un, et une estimation du code couleur hexadécimal d\'après ce que tu vois sur la photo. Réponds UNIQUEMENT avec un tableau JSON valide, sans aucun texte autour, sans balises markdown, au format exact : [{"numero":"1","nom":"","hex":"#RRGGBB"}]. Si un champ est inconnu, laisse une chaîne vide. Ne réponds rien d\'autre que ce tableau JSON.',
-              },
+              { type: "image_url", image_url: { url: `data:${mediaType || "image/jpeg"};base64,${base64}` } },
+              { type: "text", text: prompt },
             ],
           },
         ],
@@ -130,15 +122,10 @@ router.post("/analyze-photo", requireAdmin, async (req, res) => {
     });
     const data = await response.json();
     if (!response.ok) {
-      console.error("Erreur API Anthropic :", data);
-      return res
-        .status(502)
-        .json({ error: "Erreur de l'API d'analyse d'image." });
+      console.error("Erreur OpenRouter :", data);
+      return res.status(502).json({ error: "Erreur de l'API d'analyse d'image." });
     }
-    const text = (data.content || [])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n");
+    const text = data.choices?.[0]?.message?.content || "";
     const clean = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
     if (!Array.isArray(parsed)) throw new Error("Format inattendu");
@@ -154,12 +141,9 @@ router.post("/analyze-photo", requireAdmin, async (req, res) => {
     res.json({ results });
   } catch (e) {
     console.error(e);
-    res
-      .status(500)
-      .json({
-        error:
-          "Impossible d'analyser cette photo. Essaie une photo plus nette et bien éclairée.",
-      });
+    res.status(500).json({
+      error: "Impossible d'analyser cette photo. Essaie une photo plus nette et bien éclairée.",
+    });
   }
 });
 
