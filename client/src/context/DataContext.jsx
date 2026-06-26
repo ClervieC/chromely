@@ -16,21 +16,24 @@ export function DataProvider({ children }) {
   const [wishlist, setWishlist] = useState([]);
   const [palette, setPalette] = useState([]);
   const [customPacks, setCustomPacks] = useState([]);
+  const [customBrands, setCustomBrands] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [f, w, p, c] = await Promise.all([
+      const [f, w, p, c, b] = await Promise.all([
         api.getFeutres(),
         api.getWishlist(),
         api.getPalette(),
         api.getPacks(),
+        api.getBrands(),
       ]);
       setFeutres(f.feutres);
       setWishlist(w.wishlist);
       setPalette(p.palette);
       setCustomPacks(c.packs);
+      setCustomBrands(b.brands);
     } finally {
       setLoading(false);
     }
@@ -108,11 +111,50 @@ export function DataProvider({ children }) {
     setPalette((prev) => prev.filter((p) => p.id !== id));
   }
 
+  // --- Marques personnalisées ---
+  async function addCustomBrand(values) {
+    const { brand } = await api.createBrand(values);
+    setCustomBrands((prev) => [...prev, brand]);
+    return brand;
+  }
+  async function updateCustomBrand(id, values) {
+    const { brand } = await api.updateBrand(id, values);
+    setCustomBrands((prev) => prev.map((b) => (b.id === id ? brand : b)));
+    return brand;
+  }
+  async function removeCustomBrand(id) {
+    await api.deleteBrand(id);
+    setCustomBrands((prev) => prev.filter((b) => b.id !== id));
+  }
+
   // --- Catalogue / packs personnalisés (admin uniquement pour l'écriture) ---
   async function addCustomPack(values) {
     const { pack } = await api.createPack(values);
     setCustomPacks((prev) => [...prev, pack]);
     return pack;
+  }
+  async function updateCustomPack(id, values) {
+    const { pack } = await api.updatePack(id, values);
+    setCustomPacks((prev) => prev.map((p) => (p.id === id ? pack : p)));
+    return pack;
+  }
+  async function uploadPackImage(id, file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const { pack } = await api.uploadPackImage(id, e.target.result);
+          setCustomPacks((prev) => prev.map((p) => (p.id === id ? pack : p)));
+          resolve(pack);
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  async function deletePackImage(id) {
+    await api.deletePackImage(id);
+    setCustomPacks((prev) => prev.map((p) => (p.id === id ? { ...p, imageUrl: null } : p)));
   }
   async function removeCustomPack(id) {
     await api.deletePack(id);
@@ -124,6 +166,7 @@ export function DataProvider({ children }) {
     wishlist,
     palette,
     customPacks,
+    customBrands,
     loading,
     refreshAll,
     addFeutre,
@@ -136,7 +179,13 @@ export function DataProvider({ children }) {
     addPaletteEntry,
     bulkImportPalette,
     removePaletteEntry,
+    addCustomBrand,
+    updateCustomBrand,
+    removeCustomBrand,
     addCustomPack,
+    updateCustomPack,
+    uploadPackImage,
+    deletePackImage,
     removeCustomPack,
   };
 

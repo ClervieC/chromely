@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Field } from "./ui.jsx";
 import { MARQUES } from "../data.js";
 
-export function ProposalForm({ type, initial, onCancel, onSubmit, title }) {
+export function ProposalForm({ type, initial, onCancel, onSubmit, title, customBrands, customPacks }) {
+  const allMarques = useMemo(() => {
+    const known = new Set(MARQUES.filter((m) => m !== "Autre"));
+    (customBrands || []).forEach((b) => known.add(b.nom));
+    (customPacks || []).forEach((p) => { if (p.marque) known.add(p.marque); });
+    return [...known, "Autre"];
+  }, [customBrands, customPacks]);
+
   const [marque, setMarque] = useState(initial?.marque || "GuangNa");
   const [marqueAutre, setMarqueAutre] = useState(
-    initial && !MARQUES.includes(initial.marque) ? initial.marque : "",
+    initial && !allMarques.includes(initial.marque) ? initial.marque : "",
   );
   const [pack, setPack] = useState(initial?.pack || "");
   const [numero, setNumero] = useState(initial?.numero || "");
@@ -54,7 +61,7 @@ export function ProposalForm({ type, initial, onCancel, onSubmit, title }) {
             value={marque}
             onChange={(e) => setMarque(e.target.value)}
           >
-            {MARQUES.map((m) => (
+            {allMarques.map((m) => (
               <option key={m} value={m}>
                 {m}
               </option>

@@ -12,6 +12,7 @@ import PannePage from "./pages/PannePage.jsx";
 import WishlistPage from "./pages/WishlistPage.jsx";
 import PalettePage from "./pages/PalettePage.jsx";
 import CataloguePage from "./pages/CataloguePage.jsx";
+import PacksPage from "./pages/PacksPage.jsx";
 import ProposalsPage from "./pages/ProposalsPage.jsx";
 import AdminProposalsPage from "./pages/AdminProposalsPage.jsx";
 import AdminUsersPage from "./pages/AdminUsersPage.jsx";
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="envies" element={<WishlistPage />} />
         <Route path="palette" element={<PalettePage />} />
         <Route path="catalogue" element={<CataloguePage />} />
+        <Route path="packs" element={<PacksPage />} />
         <Route path="propositions" element={<ProposalsPage />} />
         <Route
           path="admin/propositions"

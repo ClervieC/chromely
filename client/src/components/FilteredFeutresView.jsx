@@ -12,8 +12,9 @@ export function FilteredFeutresView({
   emptyIcon,
   emptyTitle,
   emptyText,
+  accentColor,
 }) {
-  const { feutres, palette, customPacks, addFeutre, editFeutre, removeFeutre } = useData();
+  const { feutres, palette, customPacks, customBrands, addFeutre, editFeutre, removeFeutre } = useData();
   const toast = useToast();
   const [feutreModal, setFeutreModal] = useState(null);
   const [groupModal, setGroupModal] = useState(null);
@@ -59,14 +60,22 @@ export function FilteredFeutresView({
     }
   }
 
+  const sub = subtitle ? subtitle(list) : null;
+
   return (
     <div className="view">
-      <div className="view-head">
-        <h2 className="display">{title}</h2>
-        {list.length > 0 && subtitle && (
-          <p className="view-sub">{subtitle(list)}</p>
-        )}
+      <div className="page-header" style={accentColor ? { "--page-color": accentColor } : {}}>
+        <div className="page-header-inner">
+          <div className="page-header-text">
+            <h1 className="display page-header-title">{title}</h1>
+            {sub && list.length > 0 && <p className="page-header-sub">{sub}</p>}
+          </div>
+          {list.length > 0 && (
+            <span className="page-header-count">{list.length}</span>
+          )}
+        </div>
       </div>
+
       {list.length === 0 ? (
         <EmptyState icon={emptyIcon} title={emptyTitle} text={emptyText} />
       ) : (
@@ -100,11 +109,7 @@ export function FilteredFeutresView({
       )}
 
       {feutreModal && (
-        <Modal
-          title="Modifier le feutre"
-          onClose={() => setFeutreModal(null)}
-          width={640}
-        >
+        <Modal title="Modifier le feutre" onClose={() => setFeutreModal(null)} width={640}>
           <FeutreForm
             initial={feutreModal.initial}
             onCancel={() => setFeutreModal(null)}
@@ -112,27 +117,17 @@ export function FilteredFeutresView({
             title="Enregistrer"
             palette={palette}
             customPacks={customPacks}
+            customBrands={customBrands}
             feutres={feutres}
           />
         </Modal>
       )}
       {confirmDelete && (
-        <Modal
-          title="Confirmer la suppression"
-          onClose={() => setConfirmDelete(null)}
-          width={420}
-        >
+        <Modal title="Confirmer la suppression" onClose={() => setConfirmDelete(null)} width={420}>
           <p className="confirm-text">Supprimer définitivement ce feutre ?</p>
           <div className="modal-actions">
-            <button
-              className="btn btn-ghost"
-              onClick={() => setConfirmDelete(null)}
-            >
-              Annuler
-            </button>
-            <button className="btn btn-danger" onClick={handleDelete}>
-              Supprimer
-            </button>
+            <button className="btn btn-ghost" onClick={() => setConfirmDelete(null)}>Annuler</button>
+            <button className="btn btn-danger" onClick={handleDelete}>Supprimer</button>
           </div>
         </Modal>
       )}

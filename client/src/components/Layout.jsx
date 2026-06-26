@@ -12,6 +12,7 @@ import {
   Users,
   PenTool,
   LogOut,
+  Layers,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "./Toast.jsx";
@@ -19,6 +20,7 @@ import { useToast } from "./Toast.jsx";
 const NAV = [
   { to: "/", label: "Tableau de bord", icon: LayoutDashboard, end: true },
   { to: "/stock", label: "Mon stock", icon: LayoutGrid },
+  { to: "/packs", label: "Mes packs", icon: Layers },
   { to: "/doublons", label: "Doublons", icon: Copy },
   { to: "/panne", label: "En panne", icon: AlertTriangle },
   { to: "/envies", label: "Envies d'achat", icon: Heart },

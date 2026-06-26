@@ -2,7 +2,14 @@ import { useMemo, useState } from "react";
 import { MARQUES, mergedPackNames, extractCountFromPackName } from "../data.js";
 import { Field } from "./ui.jsx";
 
-export function PackForm({ onCancel, onSubmit, title, customPacks }) {
+export function PackForm({ onCancel, onSubmit, title, customPacks, customBrands }) {
+  const allMarques = useMemo(() => {
+    const known = new Set(MARQUES.filter((m) => m !== "Autre"));
+    (customBrands || []).forEach((b) => known.add(b.nom));
+    (customPacks || []).forEach((p) => { if (p.marque) known.add(p.marque); });
+    return [...known, "Autre"];
+  }, [customBrands, customPacks]);
+
   const [marque, setMarque] = useState("GuangNa");
   const [marqueAutre, setMarqueAutre] = useState("");
   const [pack, setPack] = useState("");
@@ -39,7 +46,7 @@ export function PackForm({ onCancel, onSubmit, title, customPacks }) {
       <div className="form-grid">
         <Field label="Marque">
           <select className="input" value={marque} onChange={(e) => setMarque(e.target.value)}>
-            {MARQUES.map((m) => <option key={m} value={m}>{m}</option>)}
+            {allMarques.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
         </Field>
         {marque === "Autre" && (

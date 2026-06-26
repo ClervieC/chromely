@@ -2,13 +2,25 @@ import { useMemo, useState } from "react";
 import { MARQUES, ETATS, mergedPackNames, paletteKey, MARQUES_NUMERO_UNIVERSEL } from "../data.js";
 import { Field } from "./ui.jsx";
 
-export function FeutreForm({ initial, onCancel, onSubmit, title, palette, customPacks, feutres }) {
+export function FeutreForm({ initial, onCancel, onSubmit, title, palette, customPacks, customBrands, feutres }) {
   const isEdit = !!initial?.id;
   const qty = initial?.quantite || 1;
 
-  const [marque, setMarque] = useState(initial?.marque || "GuangNa");
+  // Toutes les marques connues : hardcodées + custom brands + marques des customPacks
+  const allMarques = useMemo(() => {
+    const known = new Set(MARQUES.filter((m) => m !== "Autre"));
+    (customBrands || []).forEach((b) => known.add(b.nom));
+    (customPacks || []).forEach((p) => { if (p.marque) known.add(p.marque); });
+    return [...known, "Autre"];
+  }, [customBrands, customPacks]);
+
+  const defaultMarque = initial?.marque || "GuangNa";
+  const [marque, setMarque] = useState(
+    allMarques.includes(defaultMarque) ? defaultMarque : (defaultMarque || "GuangNa")
+  );
   const [marqueAutre, setMarqueAutre] = useState(
-    initial && !MARQUES.includes(initial.marque) ? initial.marque : "",
+    initial && !MARQUES.includes(initial.marque) && !(customBrands || []).some(b => b.nom === initial.marque)
+      ? initial.marque : "",
   );
   const [pack, setPack] = useState(initial?.pack || "");
   const [numero, setNumero] = useState(initial?.numero || "");
@@ -99,7 +111,7 @@ export function FeutreForm({ initial, onCancel, onSubmit, title, palette, custom
       <div className="form-grid">
         <Field label="Marque">
           <select className="input" value={marque} onChange={(e) => setMarque(e.target.value)}>
-            {MARQUES.map((m) => <option key={m} value={m}>{m}</option>)}
+            {allMarques.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
         </Field>
         {marque === "Autre" && (

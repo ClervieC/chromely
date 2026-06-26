@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MARQUES, PRIORITES, mergedPackNames } from "../data.js";
 import { Field } from "./ui.jsx";
 
-export function WishForm({ initial, onCancel, onSubmit, title, customPacks }) {
+export function WishForm({ initial, onCancel, onSubmit, title, customPacks, customBrands }) {
+  const allMarques = useMemo(() => {
+    const known = new Set(MARQUES.filter((m) => m !== "Autre"));
+    (customBrands || []).forEach((b) => known.add(b.nom));
+    (customPacks || []).forEach((p) => { if (p.marque) known.add(p.marque); });
+    return [...known, "Autre"];
+  }, [customBrands, customPacks]);
+
   const [marque, setMarque] = useState(initial?.marque || "GuangNa");
   const [marqueAutre, setMarqueAutre] = useState(
-    initial && !MARQUES.includes(initial.marque) ? initial.marque : "",
+    initial && !allMarques.includes(initial.marque) ? initial.marque : "",
   );
   const [pack, setPack] = useState(initial?.pack || "");
   const [couleur, setCouleur] = useState(initial?.couleur || "");
@@ -43,7 +50,7 @@ export function WishForm({ initial, onCancel, onSubmit, title, customPacks }) {
             value={marque}
             onChange={(e) => setMarque(e.target.value)}
           >
-            {MARQUES.map((m) => (
+            {allMarques.map((m) => (
               <option key={m} value={m}>
                 {m}
               </option>

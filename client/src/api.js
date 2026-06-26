@@ -43,9 +43,18 @@ export const api = {
     request("/palette/analyze-photo", { method: "POST", body }),
   deletePaletteEntry: (id) => request(`/palette/${id}`, { method: "DELETE" }),
 
+  // Marques personnalisées
+  getBrands: () => request("/brands"),
+  createBrand: (body) => request("/brands", { method: "POST", body }),
+  updateBrand: (id, body) => request(`/brands/${id}`, { method: "PUT", body }),
+  deleteBrand: (id) => request(`/brands/${id}`, { method: "DELETE" }),
+
   // Catalogue / packs personnalisés (partagé)
   getPacks: () => request("/packs"),
   createPack: (body) => request("/packs", { method: "POST", body }),
+  updatePack: (id, body) => request(`/packs/${id}`, { method: "PUT", body }),
+  uploadPackImage: (id, imageDataUrl) => request(`/packs/${id}/image`, { method: "POST", body: { imageDataUrl } }),
+  deletePackImage: (id) => request(`/packs/${id}/image`, { method: "DELETE" }),
   deletePack: (id) => request(`/packs/${id}`, { method: "DELETE" }),
 
   // Propositions

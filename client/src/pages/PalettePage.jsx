@@ -28,13 +28,20 @@ function ColorSwatch({ entry, onDelete, onPropose, onEdit, isAdmin }) {
         style={{ background: hex || "repeating-linear-gradient(45deg,#d8dbd9 0 5px,#eceeec 5px 10px)" }}
       >
         {!hex && <span className="cap-unknown">?</span>}
-        {isAdmin ? (
-          <div className="swatch-actions">
-            <button type="button" className={"swatch-action" + (dark ? " swatch-action-light" : "")} onClick={() => onEdit(entry)} title="Modifier"><Pencil size={11} /></button>
-            <button type="button" className={"swatch-action" + (dark ? " swatch-action-light" : "")} onClick={() => onDelete(entry)} title="Supprimer"><Trash2 size={11} /></button>
+        <div className="swatch-overlay-actions">
+          {isAdmin ? (
+            <>
+              <button type="button" className={"swatch-action" + (dark ? " dark" : "")} onClick={() => onEdit(entry)} title="Modifier"><Pencil size={11} /></button>
+              <button type="button" className={"swatch-action" + (dark ? " dark" : "")} onClick={() => onDelete(entry)} title="Supprimer"><Trash2 size={11} /></button>
+            </>
+          ) : (
+            <button type="button" className={"swatch-action" + (dark ? " dark" : "")} onClick={() => onPropose(entry)} title="Proposer une correction"><Send size={11} /></button>
+          )}
+        </div>
+        {hex && (
+          <div className={"swatch-hex-pill" + (dark ? " dark" : "")}>
+            {hex.toUpperCase()}
           </div>
-        ) : (
-          <button type="button" className={"swatch-action" + (dark ? " swatch-action-light" : "")} onClick={() => onPropose(entry)} title="Proposer une correction"><Send size={12} /></button>
         )}
       </div>
       <div className="swatch-info">
@@ -56,9 +63,7 @@ function EditSwatchModal({ entry, allMarques, packsForMarque, onClose, onSave })
   const availablePacks = packsForMarque(marque);
 
   function togglePack(p) {
-    setPacks((prev) =>
-      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
-    );
+    setPacks((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
   }
 
   function addNewPack() {
@@ -69,7 +74,7 @@ function EditSwatchModal({ entry, allMarques, packsForMarque, onClose, onSave })
   }
 
   return (
-    <Modal title="Modifier la couleur" onClose={onClose} width={500}>
+    <Modal title="Modifier la couleur" onClose={onClose} width={500} accent={hex}>
       <div className="form-grid">
         <label className="field">
           <span className="field-label">Marque</span>
@@ -148,15 +153,17 @@ function EditSwatchModal({ entry, allMarques, packsForMarque, onClose, onSave })
 export default function PalettePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const { feutres, palette, customPacks, addPaletteEntry, bulkImportPalette, removePaletteEntry } = useData();
+  const { feutres, palette, customPacks, customBrands, addPaletteEntry, bulkImportPalette, removePaletteEntry } = useData();
   const toast = useToast();
 
   const allMarques = useMemo(() => {
     const set = new Set(["GuangNa", "Tooli-Art", "Nicety"]);
-    feutres.forEach((f) => set.add(f.marque));
-    palette.forEach((p) => set.add(p.marque));
+    (customBrands || []).forEach((b) => set.add(b.nom));
+    feutres.forEach((f) => { if (f.marque) set.add(f.marque); });
+    palette.forEach((p) => { if (p.marque) set.add(p.marque); });
+    customPacks.forEach((p) => { if (p.marque) set.add(p.marque); });
     return [...set];
-  }, [feutres, palette]);
+  }, [feutres, palette, customBrands, customPacks]);
 
   const [marque, setMarque] = useState(allMarques[0] || "GuangNa");
   const packsForMarque = useMemo(() => {
@@ -222,9 +229,7 @@ export default function PalettePage() {
 
   async function handleUpdateEntry({ marque, packs, numero, nom, hex }) {
     try {
-      await Promise.all(
-        packs.map((pack) => addPaletteEntry({ marque, pack, numero, nom, hex }))
-      );
+      await Promise.all(packs.map((pack) => addPaletteEntry({ marque, pack, numero, nom, hex })));
       toast.success(packs.length > 1 ? `Couleur enregistrée dans ${packs.length} packs` : "Couleur mise à jour");
       setEditModal(null);
     } catch (e) {
@@ -251,102 +256,101 @@ export default function PalettePage() {
   }
 
   return (
-    <div className="view">
-      <div className="view-head">
-        <h2 className="display">Palette de couleurs</h2>
-        <p className="view-sub">
-          {isAdmin
-            ? "La couleur réelle de chaque numéro, partagée avec tous les utilisateurs."
-            : "La couleur réelle de chaque numéro. Tu peux proposer une correction si une couleur est manquante ou inexacte."}
-        </p>
-      </div>
+    <div className="view palette-view">
 
-      <div className="panel">
-        <div className="form-grid">
-          <label className="field">
-            <span className="field-label">Marque</span>
-            <select className="input" value={marque} onChange={(e) => setMarque(e.target.value)}>
-              {allMarques.map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Pack</span>
-            <input
-              className="input"
-              list="palette-pack-suggestions"
-              value={pack}
-              onChange={(e) => setPack(e.target.value)}
-              placeholder="Ex : 240 couleurs"
-            />
-            <datalist id="palette-pack-suggestions">
-              {packsForMarque.map((p) => <option key={p} value={p} />)}
-            </datalist>
-          </label>
+      {/* ── Hero ── */}
+      <div className="palette-hero">
+        <div className="palette-hero-bg" />
+        <div className="palette-hero-content">
+          <div>
+            <h1 className="display palette-hero-title">Palette de couleurs</h1>
+            <p className="palette-hero-sub">
+              {isAdmin
+                ? "La couleur réelle de chaque numéro, partagée avec tous les utilisateurs."
+                : "La couleur réelle de chaque numéro. Tu peux proposer une correction si une couleur est manquante."}
+            </p>
+          </div>
+          {!isAdmin && pack && (
+            <button
+              type="button"
+              className="btn btn-hero-ghost"
+              onClick={() => setProposeModal({ initial: { marque, pack } })}
+            >
+              <Send size={14} /> Proposer une couleur
+            </button>
+          )}
         </div>
       </div>
 
+      {/* ── Filtres marque / pack ── */}
+      <div className="palette-filters">
+        <label className="field">
+          <span className="field-label">Marque</span>
+          <select className="input" value={marque} onChange={(e) => setMarque(e.target.value)}>
+            {allMarques.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span className="field-label">Pack</span>
+          <select className="input" value={pack} onChange={(e) => setPack(e.target.value)}>
+            <option value="">— Choisir un pack —</option>
+            {packsForMarque.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </label>
+      </div>
+
+      {/* ── Panneau admin : ajouter + importer ── */}
       {isAdmin && (
-        <div className="panel">
-          <h4 style={{ marginTop: 0 }}>Ajouter une couleur</h4>
-          <div className="palette-add-row">
-            <input
-              className="input mono"
-              style={{ width: 90 }}
-              placeholder="N°"
-              value={numero}
-              onChange={(e) => setNumero(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            />
-            <input
-              className="input"
-              placeholder="Nom (optionnel)"
-              value={nom}
-              onChange={(e) => setNom(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            />
-            <input
-              type="color"
-              className="color-input"
-              value={hex}
-              onChange={(e) => setHex(e.target.value)}
-            />
-            <button type="button" className="btn btn-primary btn-small" onClick={handleAdd}>
-              <Plus size={13} /> Ajouter
-            </button>
+        <div className="dash-panel palette-admin-panel">
+          <h3 className="dash-panel-title">Ajouter des couleurs</h3>
+
+          <div className="palette-admin-section">
+            <span className="palette-admin-section-label">Couleur individuelle</span>
+            <div className="palette-add-row">
+              <input
+                className="input mono"
+                style={{ width: 90 }}
+                placeholder="N°"
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              />
+              <input
+                className="input"
+                placeholder="Nom (optionnel)"
+                value={nom}
+                onChange={(e) => setNom(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              />
+              <input type="color" className="color-input" value={hex} onChange={(e) => setHex(e.target.value)} />
+              <button type="button" className="btn btn-primary btn-small" onClick={handleAdd}>
+                <Plus size={13} /> Ajouter
+              </button>
+            </div>
           </div>
 
-          <h4 style={{ marginTop: 20 }}>Importer en masse</h4>
-          <p className="field-hint">
-            Une ligne par couleur : numéro, nom (optionnel), #hex. Ex : "1, Rouge vif, #E2231A"
-          </p>
-          <textarea
-            className="input textarea"
-            rows={5}
-            value={bulkText}
-            onChange={(e) => setBulkText(e.target.value)}
-            placeholder={"1, Rouge vif, #E2231A\n2, Orange, #F2811D"}
-          />
-          <div className="modal-actions" style={{ justifyContent: "flex-start", marginTop: 8 }}>
-            <button type="button" className="btn btn-ghost btn-small" onClick={handleBulk}>
-              <Upload size={13} /> Importer
-            </button>
+          <div className="palette-admin-section" style={{ marginTop: 20 }}>
+            <span className="palette-admin-section-label">Import en masse</span>
+            <p className="field-hint" style={{ marginBottom: 8 }}>
+              Une ligne par couleur : numéro, nom (optionnel), #hex — ex : <code>1, Rouge vif, #E2231A</code>
+            </p>
+            <textarea
+              className="input textarea"
+              rows={4}
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+              placeholder={"1, Rouge vif, #E2231A\n2, Orange, #F2811D"}
+            />
+            <div style={{ marginTop: 8 }}>
+              <button type="button" className="btn btn-ghost btn-small" onClick={handleBulk}>
+                <Upload size={13} /> Importer
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {!isAdmin && pack && (
-        <div className="panel" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <p className="view-sub" style={{ margin: 0 }}>Une couleur manque ou est inexacte ?</p>
-          <button
-            type="button"
-            className="btn btn-primary btn-small"
-            onClick={() => setProposeModal({ initial: { marque, pack } })}
-          >
-            <Send size={13} /> Proposer une couleur
-          </button>
-        </div>
-      )}
-
+      {/* ── Grille de swatches ── */}
       {pack ? (
         entries.length === 0 ? (
           <EmptyState
@@ -355,24 +359,27 @@ export default function PalettePage() {
             text={isAdmin ? "Ajoute tes couleurs ci-dessus." : "Tu peux proposer la première couleur de ce pack."}
           />
         ) : (
-          <div className="swatch-grid">
-            {entries.map((p) => (
-              <ColorSwatch
-                key={p.id}
-                entry={p}
-                isAdmin={isAdmin}
-                onEdit={(e) => setEditModal(e)}
-                onDelete={handleDeleteEntry}
-                onPropose={(e) => setProposeModal({ initial: { marque, pack, numero: e.numero, nomPropose: e.nom, hexPropose: e.hex } })}
-              />
-            ))}
-          </div>
+          <>
+            <div className="palette-count">{entries.length} couleur{entries.length > 1 ? "s" : ""}</div>
+            <div className="swatch-grid">
+              {entries.map((p) => (
+                <ColorSwatch
+                  key={p.id}
+                  entry={p}
+                  isAdmin={isAdmin}
+                  onEdit={(e) => setEditModal(e)}
+                  onDelete={handleDeleteEntry}
+                  onPropose={(e) => setProposeModal({ initial: { marque, pack, numero: e.numero, nomPropose: e.nom, hexPropose: e.hex } })}
+                />
+              ))}
+            </div>
+          </>
         )
       ) : (
         <EmptyState
           icon={PaletteIcon}
-          title="Choisis ou écris un pack"
-          text="Indique le pack pour lequel afficher les couleurs."
+          title="Choisis un pack"
+          text="Sélectionne la marque et le pack pour afficher ses couleurs."
         />
       )}
 
@@ -394,6 +401,8 @@ export default function PalettePage() {
             onCancel={() => setProposeModal(null)}
             onSubmit={handleSubmitProposal}
             title="Envoyer la proposition"
+            customBrands={customBrands}
+            customPacks={customPacks}
           />
         </Modal>
       )}

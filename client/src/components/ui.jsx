@@ -47,7 +47,10 @@ export function EmptyState({ icon, title, text, actionLabel, onAction }) {
   );
 }
 
-export function Modal({ title, onClose, children, width }) {
+export function Modal({ title, onClose, children, width, accent }) {
+  const headStyle = accent
+    ? { background: `linear-gradient(135deg, ${accent} 0%, ${accent}bb 100%)` }
+    : undefined;
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
       <div
@@ -55,7 +58,7 @@ export function Modal({ title, onClose, children, width }) {
         style={width ? { maxWidth: width } : undefined}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="modal-head">
+        <div className="modal-head" style={headStyle}>
           <h3>{title}</h3>
           <IconBtn icon={X} onClick={onClose} title="Fermer" />
         </div>
@@ -182,9 +185,10 @@ export function GroupModal({ group, onClose, onEdit, onDelete }) {
   const brand = BRAND_COLOR[f.marque] || BRAND_COLOR.Autre;
   return (
     <Modal
-      title={`n°${f.numero || "?"} — ${f.marque}${f.nom ? ` (${f.nom})` : ""}`}
+      title={`n°${f.numero || "?"} — ${f.marque}${f.nom ? ` · ${f.nom}` : ""}`}
       onClose={onClose}
       width={480}
+      accent={brand}
     >
       <div className="group-modal-list">
         {group.map((item) => {

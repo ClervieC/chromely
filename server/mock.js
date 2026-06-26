@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { buildSeedPalette } from "./seed-palette.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -33,19 +34,25 @@ const wishlist = [
 ];
 
 const palette = [
+  // Entrées de démonstration
   { id: "30", marque: "GuangNa",   pack: "Dual Tip 80", numero: "1",  nom: "Rouge primaire", hex: "#E2231A" },
   { id: "31", marque: "GuangNa",   pack: "Dual Tip 80", numero: "2",  nom: "Rouge carmin",   hex: "#960018" },
   { id: "32", marque: "GuangNa",   pack: "Dual Tip 80", numero: "5",  nom: "Jaune soleil",   hex: "#FFD700" },
   { id: "33", marque: "Tooli-Art", pack: "Set 48",      numero: "12", nom: "Bleu cobalt",    hex: "#0047AB" },
+  // Couleurs chargées depuis seed-palette.js
+  ...buildSeedPalette(),
 ];
 
 const packs = [
-  { id: "40", marque: "GuangNa",   nom: "Dual Tip 80", taille: 80, detail: "Dual tip alcool" },
-  { id: "41", marque: "Tooli-Art", nom: "Set 48",      taille: 48, detail: null },
-  { id: "42", marque: "Nicety",    nom: "Set 24",      taille: 24, detail: null },
+  { id: "40", marque: "GuangNa",   nom: "Dual Tip 80", taille: 80, detail: "Dual tip alcool", lien_achat: null, image_url: null },
+  { id: "41", marque: "Tooli-Art", nom: "Set 48",      taille: 48, detail: null,               lien_achat: null, image_url: null },
+  { id: "42", marque: "Nicety",    nom: "Set 24",      taille: 24, detail: null,               lien_achat: null, image_url: null },
 ];
 
 const proposals = [];
+
+// Marques personnalisées (ajoutées par admin)
+const brands = [];
 
 // ─── Auth en mémoire (cookie simple sans JWT) ─────────────────────────────
 
@@ -167,21 +174,45 @@ app.delete("/api/feutres/:id", requireAuth, (req, res) => {
 app.post("/api/feutres/bulk-pack", requireAuth, (req, res) => {
   const { marque, pack, taille, depart, dateAchat, prixTotal, notes } = req.body || {};
   if (!marque || !pack || !taille) return res.status(400).json({ error: "Marque, pack et taille requis." });
-  const n = Math.min(999, Math.max(1, Number(taille)));
-  const start = Number(depart) || 1;
-  let added = 0, incremented = 0, matched = 0;
   const noteText = notes || (prixTotal ? `Pack acheté ${prixTotal} €` : null);
-  for (let i = 0; i < n; i++) {
-    const numero = String(start + i);
-    const existing = feutres.find(f => f.owner_id === req.user.id && f.marque === marque && f.pack === pack && f.numero === numero);
-    if (existing) { existing.quantite++; incremented++; }
-    else {
-      const match = palette.find(p => p.marque === marque && p.pack === pack && p.numero === numero);
-      if (match) matched++;
-      feutres.push({ id: uid(), owner_id: req.user.id, marque, pack, numero, nom: match?.nom || null, hex: match?.hex || null, quantite: 1, etat: "fonctionne", date_achat: dateAchat || null, prix: null, notes: noteText, created_at: new Date().toISOString() });
-      added++;
+  let added = 0, incremented = 0, matched = 0;
+
+  // Cherche les couleurs connues pour ce pack dans la palette
+  const paletteEntries = palette.filter(p =>
+    p.marque.trim().toLowerCase() === marque.trim().toLowerCase() &&
+    p.pack.trim().toLowerCase() === pack.trim().toLowerCase()
+  );
+
+  if (paletteEntries.length > 0) {
+    // Palette connue → on crée un feutre par couleur référencée
+    for (const entry of paletteEntries) {
+      const existing = feutres.find(f =>
+        f.owner_id === req.user.id && f.marque === marque && f.pack === pack && f.numero === entry.numero
+      );
+      if (existing) { existing.quantite++; incremented++; }
+      else {
+        feutres.push({ id: uid(), owner_id: req.user.id, marque, pack, numero: entry.numero, nom: entry.nom || null, hex: entry.hex || null, quantite: 1, etat: "fonctionne", date_achat: dateAchat || null, prix: null, notes: noteText, created_at: new Date().toISOString() });
+        added++;
+        matched++;
+      }
+    }
+  } else {
+    // Pas de palette → numérotation séquentielle de 1 à taille
+    const n = Math.min(999, Math.max(1, Number(taille)));
+    const start = Number(depart) || 1;
+    for (let i = 0; i < n; i++) {
+      const numero = String(start + i);
+      const existing = feutres.find(f =>
+        f.owner_id === req.user.id && f.marque === marque && f.pack === pack && f.numero === numero
+      );
+      if (existing) { existing.quantite++; incremented++; }
+      else {
+        feutres.push({ id: uid(), owner_id: req.user.id, marque, pack, numero, nom: null, hex: null, quantite: 1, etat: "fonctionne", date_achat: dateAchat || null, prix: null, notes: noteText, created_at: new Date().toISOString() });
+        added++;
+      }
     }
   }
+
   res.status(201).json({ added, incremented, matched });
 });
 
@@ -313,7 +344,7 @@ app.delete("/api/palette/:id", requireAdmin, (req, res) => {
 // ─── Routes Packs ────────────────────────────────────────────────────────────
 
 function packToApi(r) {
-  return { id: r.id, marque: r.marque, nom: r.nom, taille: r.taille, detail: r.detail };
+  return { id: r.id, marque: r.marque, nom: r.nom, taille: r.taille, detail: r.detail, lienAchat: r.lien_achat || null, imageUrl: r.image_url || null };
 }
 
 app.get("/api/packs", requireAuth, (req, res) => {
@@ -321,16 +352,75 @@ app.get("/api/packs", requireAuth, (req, res) => {
 });
 
 app.post("/api/packs", requireAdmin, (req, res) => {
-  const { marque, nom, taille, detail } = req.body || {};
+  const { marque, nom, taille, detail, lienAchat } = req.body || {};
   if (!marque || !nom) return res.status(400).json({ error: "Marque et nom requis." });
-  const row = { id: uid(), marque, nom, taille: taille ? Number(taille) : null, detail: detail || null };
+  const row = { id: uid(), marque, nom, taille: taille ? Number(taille) : null, detail: detail || null, lien_achat: lienAchat || null };
   packs.push(row);
   res.status(201).json({ pack: packToApi(row) });
+});
+
+app.put("/api/packs/:id", requireAdmin, (req, res) => {
+  const idx = packs.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Pack introuvable." });
+  const { marque, nom, taille, detail, lienAchat } = req.body || {};
+  Object.assign(packs[idx], { marque: marque || packs[idx].marque, nom: nom || packs[idx].nom, taille: taille ? Number(taille) : packs[idx].taille, detail: detail !== undefined ? detail : packs[idx].detail, lien_achat: lienAchat !== undefined ? lienAchat : packs[idx].lien_achat });
+  res.json({ pack: packToApi(packs[idx]) });
+});
+
+app.post("/api/packs/:id/image", requireAdmin, (req, res) => {
+  const idx = packs.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Pack introuvable." });
+  const { imageDataUrl } = req.body || {};
+  if (!imageDataUrl) return res.status(400).json({ error: "Image manquante." });
+  packs[idx].image_url = imageDataUrl;
+  res.json({ pack: packToApi(packs[idx]) });
+});
+
+app.delete("/api/packs/:id/image", requireAdmin, (req, res) => {
+  const idx = packs.findIndex(p => p.id === req.params.id);
+  if (idx !== -1) packs[idx].image_url = null;
+  res.json({ ok: true });
 });
 
 app.delete("/api/packs/:id", requireAdmin, (req, res) => {
   const idx = packs.findIndex(p => p.id === req.params.id);
   if (idx !== -1) packs.splice(idx, 1);
+  res.json({ ok: true });
+});
+
+// ─── Routes Brands ───────────────────────────────────────────────────────────
+
+function brandToApi(r) {
+  return { id: r.id, nom: r.nom, intro: r.intro || null, note: r.note || null };
+}
+
+app.get("/api/brands", requireAuth, (req, res) => {
+  res.json({ brands: brands.map(brandToApi) });
+});
+
+app.post("/api/brands", requireAdmin, (req, res) => {
+  const { nom, intro, note } = req.body || {};
+  if (!nom) return res.status(400).json({ error: "Nom de marque requis." });
+  if (brands.find(b => b.nom.toLowerCase() === nom.toLowerCase()))
+    return res.status(409).json({ error: "Cette marque existe déjà." });
+  const row = { id: uid(), nom: nom.trim(), intro: intro?.trim() || null, note: note?.trim() || null };
+  brands.push(row);
+  res.status(201).json({ brand: brandToApi(row) });
+});
+
+app.put("/api/brands/:id", requireAdmin, (req, res) => {
+  const idx = brands.findIndex(b => b.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Marque introuvable." });
+  const { nom, intro, note } = req.body || {};
+  if (nom) brands[idx].nom = nom.trim();
+  brands[idx].intro = intro !== undefined ? (intro?.trim() || null) : brands[idx].intro;
+  brands[idx].note = note !== undefined ? (note?.trim() || null) : brands[idx].note;
+  res.json({ brand: brandToApi(brands[idx]) });
+});
+
+app.delete("/api/brands/:id", requireAdmin, (req, res) => {
+  const idx = brands.findIndex(b => b.id === req.params.id);
+  if (idx !== -1) brands.splice(idx, 1);
   res.json({ ok: true });
 });
 

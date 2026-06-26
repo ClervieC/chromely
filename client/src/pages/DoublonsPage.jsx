@@ -20,6 +20,7 @@ export default function DoublonsPage() {
   return (
     <FilteredFeutresView
       title="Doublons"
+      accentColor="#7C5CBF"
       filterFn={isDoublon}
       subtitle={(list) => {
         const enPlus = list.reduce((s, f) => s + (f.quantite - 1), 0);

@@ -24,18 +24,14 @@ export function applyFilters(list, filters) {
       break;
     case "numero":
       out = [...out].sort((a, b) =>
-        (a.numero || "").localeCompare(b.numero || "", undefined, {
-          numeric: true,
-        }),
+        (a.numero || "").localeCompare(b.numero || "", undefined, { numeric: true }),
       );
       break;
     case "quantite":
       out = [...out].sort((a, b) => b.quantite - a.quantite);
       break;
     default:
-      out = [...out].sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-      );
+      out = [...out].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
   return out;
 }
@@ -59,9 +55,7 @@ export function FilterBar({ filters, setFilters, marquesPresentes }) {
       >
         <option value="all">Toutes les marques</option>
         {marquesPresentes.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
+          <option key={m} value={m}>{m}</option>
         ))}
       </select>
       <select
@@ -71,9 +65,7 @@ export function FilterBar({ filters, setFilters, marquesPresentes }) {
       >
         <option value="all">Tous les états</option>
         {Object.entries(ETATS).map(([k, v]) => (
-          <option key={k} value={k}>
-            {v.label}
-          </option>
+          <option key={k} value={k}>{v.label}</option>
         ))}
       </select>
       <select
@@ -91,22 +83,9 @@ export function FilterBar({ filters, setFilters, marquesPresentes }) {
 }
 
 export default function StockPage() {
-  const {
-    feutres,
-    palette,
-    customPacks,
-    addFeutre,
-    editFeutre,
-    removeFeutre,
-    bulkPack,
-  } = useData();
+  const { feutres, palette, customPacks, customBrands, addFeutre, editFeutre, removeFeutre, bulkPack } = useData();
   const toast = useToast();
-  const [filters, setFilters] = useState({
-    q: "",
-    marque: "all",
-    etat: "all",
-    sort: "recent",
-  });
+  const [filters, setFilters] = useState({ q: "", marque: "all", etat: "all", sort: "recent" });
   const [feutreModal, setFeutreModal] = useState(null);
   const [groupModal, setGroupModal] = useState(null);
   const [packModalOpen, setPackModalOpen] = useState(false);
@@ -116,10 +95,7 @@ export default function StockPage() {
     () => [...new Set(feutres.map((f) => f.marque).filter(Boolean))],
     [feutres],
   );
-  const filtered = useMemo(
-    () => applyFilters(feutres, filters),
-    [feutres, filters],
-  );
+  const filtered = useMemo(() => applyFilters(feutres, filters), [feutres, filters]);
   const grouped = useMemo(() => {
     const map = new Map();
     filtered.forEach((f) => {
@@ -139,7 +115,6 @@ export default function StockPage() {
   async function handleSubmitFeutre(entries) {
     try {
       if (feutreModal.initial) {
-        // Première entrée met à jour l'existant, les suivantes (états différents) sont créées
         await editFeutre(feutreModal.initial.id, entries[0]);
         for (const entry of entries.slice(1)) await addFeutre(entry);
         toast.success("Feutre mis à jour");
@@ -157,17 +132,13 @@ export default function StockPage() {
     try {
       const { added, incremented, matched } = await bulkPack(values);
       const parts = [];
-      if (added) parts.push(`${added} feutre(s) ajouté(s)`);
-      if (matched) parts.push(`${matched} couleur(s) retrouvée(s)`);
-      if (incremented) parts.push(`${incremented} doublon(s) mis à jour`);
-      toast.success(parts.join(", ") || "Pack traité");
+      if (added) parts.push(`${added} feutre${added > 1 ? "s" : ""} ajouté${added > 1 ? "s" : ""}`);
+      if (matched && matched === added) parts.push(`couleurs depuis la palette ✓`);
+      else if (matched) parts.push(`${matched} couleur${matched > 1 ? "s" : ""} retrouvée${matched > 1 ? "s" : ""}`);
+      if (incremented) parts.push(`${incremented} doublon${incremented > 1 ? "s" : ""} mis à jour`);
+      toast.success(parts.join(" · ") || "Pack traité");
       setPackModalOpen(false);
-      setFilters({
-        q: values.pack,
-        marque: values.marque,
-        etat: "all",
-        sort: "numero",
-      });
+      setFilters({ q: values.pack, marque: values.marque, etat: "all", sort: "numero" });
     } catch (e) {
       toast.error(e.message);
     }
@@ -184,30 +155,33 @@ export default function StockPage() {
     }
   }
 
+  const total = feutres.reduce((s, f) => s + (f.quantite || 1), 0);
+
   return (
-    <div className="view">
-      <div className="view-head">
-        <h2 className="display">Mon stock</h2>
-        <div className="view-head-actions">
-          <button
-            className="btn btn-ghost"
-            onClick={() => setPackModalOpen(true)}
-          >
-            <Layers size={15} /> Ajouter un pack entier
-          </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => setFeutreModal({ initial: null })}
-          >
-            <Plus size={15} /> Ajouter un feutre
-          </button>
+    <div className="view stock-view">
+      <div className="page-header" style={{ "--page-color": "#4f46e5" }}>
+        <div className="page-header-inner">
+          <div className="page-header-text">
+            <h1 className="display page-header-title">Mon stock</h1>
+            {feutres.length > 0 && (
+              <p className="page-header-sub">
+                {total} feutre{total > 1 ? "s" : ""} · {feutres.length} référence{feutres.length > 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+          <div className="page-header-actions">
+            <button className="btn btn-ghost" onClick={() => setPackModalOpen(true)}>
+              <Layers size={15} /> Pack entier
+            </button>
+            <button className="btn btn-primary" onClick={() => setFeutreModal({ initial: null })}>
+              <Plus size={15} /> Ajouter
+            </button>
+          </div>
         </div>
       </div>
-      <FilterBar
-        filters={filters}
-        setFilters={setFilters}
-        marquesPresentes={marquesPresentes}
-      />
+
+      <FilterBar filters={filters} setFilters={setFilters} marquesPresentes={marquesPresentes} />
+
       {filtered.length === 0 ? (
         <EmptyState
           icon={LayoutGrid}
@@ -248,9 +222,7 @@ export default function StockPage() {
 
       {feutreModal && (
         <Modal
-          title={
-            feutreModal.initial ? "Modifier le feutre" : "Ajouter un feutre"
-          }
+          title={feutreModal.initial ? "Modifier le feutre" : "Ajouter un feutre"}
           onClose={() => setFeutreModal(null)}
           width={640}
         >
@@ -261,42 +233,29 @@ export default function StockPage() {
             title={feutreModal.initial ? "Enregistrer" : "Ajouter au stock"}
             palette={palette}
             customPacks={customPacks}
+            customBrands={customBrands}
             feutres={feutres}
           />
         </Modal>
       )}
       {packModalOpen && (
-        <Modal
-          title="Ajouter un pack entier"
-          onClose={() => setPackModalOpen(false)}
-          width={640}
-        >
+        <Modal title="Ajouter un pack entier" onClose={() => setPackModalOpen(false)} width={640}>
           <PackForm
             onCancel={() => setPackModalOpen(false)}
             onSubmit={handleAddPack}
             title="Générer le pack"
             palette={palette}
             customPacks={customPacks}
+            customBrands={customBrands}
           />
         </Modal>
       )}
       {confirmDelete && (
-        <Modal
-          title="Confirmer la suppression"
-          onClose={() => setConfirmDelete(null)}
-          width={420}
-        >
+        <Modal title="Confirmer la suppression" onClose={() => setConfirmDelete(null)} width={420}>
           <p className="confirm-text">Supprimer définitivement ce feutre ?</p>
           <div className="modal-actions">
-            <button
-              className="btn btn-ghost"
-              onClick={() => setConfirmDelete(null)}
-            >
-              Annuler
-            </button>
-            <button className="btn btn-danger" onClick={handleDelete}>
-              Supprimer
-            </button>
+            <button className="btn btn-ghost" onClick={() => setConfirmDelete(null)}>Annuler</button>
+            <button className="btn btn-danger" onClick={handleDelete}>Supprimer</button>
           </div>
         </Modal>
       )}

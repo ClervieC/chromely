@@ -3,37 +3,25 @@ export const CATALOGUE = {
     intro:
       "Marque chinoise de feutres acryliques à pointe pinceau souple, très utilisée pour le coloriage mystère. Vendue en grosses boîtes multi-couleurs plutôt qu'en collections thématiques.",
     packs: [
-      {
-        nom: "12 couleurs",
-        detail: "Petit pack double-pointe pour découvrir la marque.",
-      },
-      { nom: "72 couleurs", detail: "Pointe brush souple." },
-      { nom: "120 couleurs", detail: "Pointe brush souple." },
-      { nom: "168 couleurs", detail: "Pointe brush souple." },
-      { nom: "200 couleurs", detail: "Sortie plus récente, pointe brush." },
-      {
-        nom: "240 couleurs",
-        detail: "Le pack le plus populaire, pointe ultra-souple.",
-      },
-      {
-        nom: "288 couleurs",
-        detail: "Le plus grand pack identifié à ce jour.",
-      },
+      { nom: "12 couleurs",  detail: "Petit pack double-pointe pour découvrir la marque.", lienAchat: null },
+      { nom: "72 couleurs",  detail: "Pointe brush souple.", lienAchat: null },
+      { nom: "120 couleurs", detail: "Pointe brush souple.", lienAchat: null },
+      { nom: "168 couleurs", detail: "Pointe brush souple.", lienAchat: null },
+      { nom: "200 couleurs", detail: "Sortie plus récente, pointe brush.", lienAchat: null },
+      { nom: "240 couleurs", detail: "Le pack le plus populaire, pointe ultra-souple.", lienAchat: null },
+      { nom: "288 couleurs", detail: "Le plus grand pack identifié à ce jour.", lienAchat: null },
     ],
   },
   "Tooli-Art": {
     intro:
       "Marque américaine haut de gamme, double pointe (0,7 mm extra-fine + pinceau ou 3 mm medium). Vendue par collections thématiques — environ 462 feutres sur l'ensemble de la gamme.",
     packs: [
-      {
-        nom: "Essential+ (30)",
-        detail: "28 couleurs assorties + 1 blanc + 1 noir.",
-      },
-      { nom: "Black & White (21)", detail: "Noirs et blancs, double pointe." },
-      { nom: "Metallic (24)", detail: "Teintes métalliques." },
-      { nom: "Neon (24)", detail: "Fluorescents." },
-      { nom: "Wildflowers (28)", detail: "Tons floraux." },
-      { nom: "Skin & Earth Tones (36)", detail: "Teintes peau et terre." },
+      { nom: "Essential+ (30)",       detail: "28 couleurs assorties + 1 blanc + 1 noir.", lienAchat: null },
+      { nom: "Black & White (21)",    detail: "Noirs et blancs, double pointe.", lienAchat: null },
+      { nom: "Metallic (24)",         detail: "Teintes métalliques.", lienAchat: null },
+      { nom: "Neon (24)",             detail: "Fluorescents.", lienAchat: null },
+      { nom: "Wildflowers (28)",      detail: "Tons floraux.", lienAchat: null },
+      { nom: "Skin & Earth Tones (36)", detail: "Teintes peau et terre.", lienAchat: null },
     ],
     note: "Tailles non confirmées pour certaines collections thématiques — vérifie le nuancier officiel.",
   },
@@ -41,13 +29,10 @@ export const CATALOGUE = {
     intro:
       "Marque vendue principalement sur Amazon, bon rapport qualité-prix pour débuter.",
     packs: [
-      { nom: "84 couleurs", detail: "Pointe brush 1-5 mm." },
-      {
-        nom: "128 couleurs",
-        detail: "Double pointe : fine 1 mm + pinceau 0,5-5 mm.",
-      },
-      { nom: "136 couleurs", detail: "Pointe extra-fine 0,7 mm." },
-      { nom: "180 couleurs", detail: "Pointe brush 1-6 mm." },
+      { nom: "84 couleurs",  detail: "Pointe brush 1-5 mm.", lienAchat: null },
+      { nom: "128 couleurs", detail: "Double pointe : fine 1 mm + pinceau 0,5-5 mm.", lienAchat: null },
+      { nom: "136 couleurs", detail: "Pointe extra-fine 0,7 mm.", lienAchat: null },
+      { nom: "180 couleurs", detail: "Pointe brush 1-6 mm.", lienAchat: null },
     ],
   },
 };
