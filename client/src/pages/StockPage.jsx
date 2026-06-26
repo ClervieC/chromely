@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Plus, Layers, Search, LayoutGrid } from "lucide-react";
 import { useData } from "../context/DataContext.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { ETATS } from "../data.js";
-import { FeutreCard, EmptyState, Modal, Field } from "../components/ui.jsx";
+import { ETATS, MARQUES_NUMERO_UNIVERSEL } from "../data.js";
+import { FeutreCard, FeutreGroupCard, GroupModal, EmptyState, Modal, Field } from "../components/ui.jsx";
 import { FeutreForm } from "../components/FeutreForm.jsx";
 import { PackForm } from "../components/PackForm.jsx";
 
@@ -108,6 +108,7 @@ export default function StockPage() {
     sort: "recent",
   });
   const [feutreModal, setFeutreModal] = useState(null);
+  const [groupModal, setGroupModal] = useState(null);
   const [packModalOpen, setPackModalOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -119,6 +120,21 @@ export default function StockPage() {
     () => applyFilters(feutres, filters),
     [feutres, filters],
   );
+  const grouped = useMemo(() => {
+    const map = new Map();
+    filtered.forEach((f) => {
+      const universel = MARQUES_NUMERO_UNIVERSEL.includes(f.marque);
+      const key =
+        universel && f.numero
+          ? `${f.marque}::num::${f.numero}`
+          : f.hex
+            ? `${f.marque}::hex::${f.hex.toLowerCase()}`
+            : `id::${f.id}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(f);
+    });
+    return [...map.values()];
+  }, [filtered]);
 
   async function handleSubmitFeutre(entries) {
     try {
@@ -202,15 +218,32 @@ export default function StockPage() {
         />
       ) : (
         <div className="feutre-grid">
-          {filtered.map((f) => (
-            <FeutreCard
-              key={f.id}
-              f={f}
-              onEdit={(item) => setFeutreModal({ initial: item })}
-              onDelete={(item) => setConfirmDelete(item)}
-            />
-          ))}
+          {grouped.map((group) =>
+            group.length === 1 ? (
+              <FeutreCard
+                key={group[0].id}
+                f={group[0]}
+                onEdit={(item) => setFeutreModal({ initial: item })}
+                onDelete={(item) => setConfirmDelete(item)}
+              />
+            ) : (
+              <FeutreGroupCard
+                key={group.map((g) => g.id).join("-")}
+                group={group}
+                onOpenGroup={(g) => setGroupModal(g)}
+              />
+            ),
+          )}
         </div>
+      )}
+
+      {groupModal && (
+        <GroupModal
+          group={groupModal}
+          onClose={() => setGroupModal(null)}
+          onEdit={(item) => { setGroupModal(null); setFeutreModal({ initial: item }); }}
+          onDelete={(item) => { setGroupModal(null); setConfirmDelete(item); }}
+        />
       )}
 
       {feutreModal && (

@@ -51,8 +51,14 @@ export function DataProvider({ children }) {
     return feutre;
   }
   async function editFeutre(id, values) {
-    const { feutre } = await api.updateFeutre(id, values);
-    setFeutres((prev) => prev.map((f) => (f.id === id ? feutre : f)));
+    const { feutre, deleted } = await api.updateFeutre(id, values);
+    setFeutres((prev) => {
+      // Remplace l'entrée modifiée par le feutre retourné (peut avoir un id différent si fusion)
+      let next = prev.map((f) => (f.id === feutre.id ? feutre : f));
+      // Supprime l'ancienne entrée si elle a été fusionnée dans une autre
+      if (deleted) next = next.filter((f) => f.id !== deleted && f.id !== id);
+      return next;
+    });
     if (values.hex && values.numero && values.pack) refreshPaletteOnly();
     return feutre;
   }

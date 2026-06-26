@@ -107,17 +107,12 @@ export function FeutreForm({ initial, onCancel, onSubmit, title, palette, custom
             <input className="input" value={marqueAutre} onChange={(e) => setMarqueAutre(e.target.value)} placeholder="Ex : Languo" />
           </Field>
         )}
-        <Field label="Pack" hint="Sélectionne dans la liste ou écris ton propre pack">
-          <input
-            className="input"
-            list="pack-suggestions"
-            value={pack}
-            onChange={(e) => setPack(e.target.value)}
-            placeholder="Ex : 240 couleurs"
-          />
-          <datalist id="pack-suggestions">
-            {suggestions.map((s) => <option key={s} value={s} />)}
-          </datalist>
+        <Field label="Pack">
+          <select className="input" value={pack} onChange={(e) => setPack(e.target.value)}>
+            <option value="">— Choisir un pack —</option>
+            {suggestions.map((s) => <option key={s} value={s}>{s}</option>)}
+            {pack && !suggestions.includes(pack) && <option value={pack}>{pack}</option>}
+          </select>
         </Field>
         <Field label="Numéro">
           <input className="input mono" value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex : 042" />

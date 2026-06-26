@@ -47,17 +47,12 @@ export function PackForm({ onCancel, onSubmit, title, customPacks }) {
             <input className="input" value={marqueAutre} onChange={(e) => setMarqueAutre(e.target.value)} />
           </Field>
         )}
-        <Field label="Pack" hint="Choisis un pack connu ou écris son nom">
-          <input
-            className="input"
-            list="pack-form-suggestions"
-            value={pack}
-            onChange={(e) => setPack(e.target.value)}
-            placeholder="Ex : 240 couleurs"
-          />
-          <datalist id="pack-form-suggestions">
-            {suggestions.map((s) => <option key={s} value={s} />)}
-          </datalist>
+        <Field label="Pack">
+          <select className="input" value={pack} onChange={(e) => setPack(e.target.value)}>
+            <option value="">— Choisir un pack —</option>
+            {suggestions.map((s) => <option key={s} value={s}>{s}</option>)}
+            {pack && !suggestions.includes(pack) && <option value={pack}>{pack}</option>}
+          </select>
         </Field>
         <Field label="Date d'achat (optionnel)">
           <input

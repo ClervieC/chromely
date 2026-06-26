@@ -117,7 +117,23 @@ router.put("/:id", async (req, res) => {
     );
   }
 
-  res.json({ feutre: toApi(result.rows[0]) });
+  // Fusionner avec un doublon existant (même marque+pack+numero+etat)
+  const updated = result.rows[0];
+  const dupResult = await pool.query(
+    `SELECT * FROM feutres WHERE owner_id=$1 AND marque=$2 AND pack=$3 AND numero=$4 AND etat=$5 AND id != $6 LIMIT 1`,
+    [req.user.id, updated.marque, updated.pack, updated.numero, updated.etat, updated.id],
+  );
+  if (dupResult.rows.length > 0) {
+    const dup = dupResult.rows[0];
+    const merged = await pool.query(
+      `UPDATE feutres SET quantite=$1 WHERE id=$2 RETURNING *`,
+      [dup.quantite + updated.quantite, dup.id],
+    );
+    await pool.query(`DELETE FROM feutres WHERE id=$1`, [updated.id]);
+    return res.json({ feutre: toApi(merged.rows[0]), deleted: updated.id });
+  }
+
+  res.json({ feutre: toApi(updated) });
 });
 
 router.delete("/:id", async (req, res) => {

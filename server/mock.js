@@ -144,8 +144,18 @@ app.put("/api/feutres/:id", requireAuth, (req, res) => {
   const idx = feutres.findIndex(f => f.id === req.params.id && f.owner_id === req.user.id);
   if (idx === -1) return res.status(404).json({ error: "Feutre introuvable." });
   const f = req.body || {};
-  Object.assign(feutres[idx], { marque: f.marque, pack: f.pack || null, numero: f.numero || null, nom: f.nom || null, hex: f.hex || null, quantite: Math.max(1, Number(f.quantite) || 1), etat: f.etat || "fonctionne", date_achat: f.dateAchat || null, prix: f.prix == null || f.prix === "" ? null : Number(f.prix), notes: f.notes || null });
-  res.json({ feutre: feutreToApi(feutres[idx]) });
+  const etatNorm = f.etat || "fonctionne";
+  Object.assign(feutres[idx], { marque: f.marque, pack: f.pack || null, numero: f.numero || null, nom: f.nom || null, hex: f.hex || null, quantite: Math.max(1, Number(f.quantite) || 1), etat: etatNorm, date_achat: f.dateAchat || null, prix: f.prix == null || f.prix === "" ? null : Number(f.prix), notes: f.notes || null });
+  // Fusionner avec un doublon existant (même marque+pack+numero+etat)
+  const current = feutres[idx];
+  const dup = feutres.find(g => g.id !== current.id && g.owner_id === req.user.id && g.marque === current.marque && g.pack === current.pack && g.numero === current.numero && g.etat === current.etat);
+  if (dup) {
+    dup.quantite += current.quantite;
+    const deletedId = current.id;
+    feutres.splice(idx, 1);
+    return res.json({ feutre: feutreToApi(dup), deleted: deletedId });
+  }
+  res.json({ feutre: feutreToApi(current) });
 });
 
 app.delete("/api/feutres/:id", requireAuth, (req, res) => {

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Layers, Heart, PenTool } from "lucide-react";
 import { useData } from "../context/DataContext.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { BRAND_COLOR } from "../data.js";
+import { BRAND_COLOR, MARQUES_NUMERO_UNIVERSEL } from "../data.js";
 import { FeutreCap, EmptyState, Modal, Spinner } from "../components/ui.jsx";
 import { FeutreForm } from "../components/FeutreForm.jsx";
 import { PackForm } from "../components/PackForm.jsx";
@@ -33,7 +33,14 @@ export default function DashboardPage() {
       totalUnites,
       totalRef: feutres.length,
       parMarque,
-      doublons: feutres.filter((f) => f.quantite > 1).length,
+      doublons: feutres.filter((f) => {
+        if (f.quantite > 1) return true;
+        const universel = MARQUES_NUMERO_UNIVERSEL.includes(f.marque);
+        return feutres.some(
+          (g) => g.id !== f.id && g.marque === f.marque && g.pack !== f.pack &&
+            (universel ? g.numero === f.numero : g.hex && f.hex && g.hex.toLowerCase() === f.hex.toLowerCase()),
+        );
+      }).length,
       panne: feutres.filter((f) => f.etat !== "fonctionne").length,
       envies: wishlist.length,
     };

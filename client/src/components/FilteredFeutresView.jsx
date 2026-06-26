@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useData } from "../context/DataContext.jsx";
 import { useToast } from "./Toast.jsx";
-import { FeutreCard, EmptyState, Modal, Field } from "./ui.jsx";
+import { FeutreCard, FeutreGroupCard, GroupModal, EmptyState, Modal } from "./ui.jsx";
 import { FeutreForm } from "./FeutreForm.jsx";
-import { ETATS } from "../data.js";
+import { MARQUES_NUMERO_UNIVERSEL } from "../data.js";
 
 export function FilteredFeutresView({
   title,
@@ -16,9 +16,26 @@ export function FilteredFeutresView({
   const { feutres, palette, customPacks, addFeutre, editFeutre, removeFeutre } = useData();
   const toast = useToast();
   const [feutreModal, setFeutreModal] = useState(null);
+  const [groupModal, setGroupModal] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const list = feutres.filter(filterFn);
+  const list = useMemo(() => feutres.filter((f) => filterFn(f, feutres)), [feutres, filterFn]);
+
+  const grouped = useMemo(() => {
+    const map = new Map();
+    list.forEach((f) => {
+      const universel = MARQUES_NUMERO_UNIVERSEL.includes(f.marque);
+      const key =
+        universel && f.numero
+          ? `${f.marque}::num::${f.numero}`
+          : f.hex
+            ? `${f.marque}::hex::${f.hex.toLowerCase()}`
+            : `id::${f.id}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(f);
+    });
+    return [...map.values()];
+  }, [list]);
 
   async function handleSubmitFeutre(entries) {
     try {
@@ -54,16 +71,34 @@ export function FilteredFeutresView({
         <EmptyState icon={emptyIcon} title={emptyTitle} text={emptyText} />
       ) : (
         <div className="feutre-grid">
-          {list.map((f) => (
-            <FeutreCard
-              key={f.id}
-              f={f}
-              onEdit={(item) => setFeutreModal({ initial: item })}
-              onDelete={(item) => setConfirmDelete(item)}
-            />
-          ))}
+          {grouped.map((group) =>
+            group.length === 1 ? (
+              <FeutreCard
+                key={group[0].id}
+                f={group[0]}
+                onEdit={(item) => setFeutreModal({ initial: item })}
+                onDelete={(item) => setConfirmDelete(item)}
+              />
+            ) : (
+              <FeutreGroupCard
+                key={group.map((g) => g.id).join("-")}
+                group={group}
+                onOpenGroup={(g) => setGroupModal(g)}
+              />
+            ),
+          )}
         </div>
       )}
+
+      {groupModal && (
+        <GroupModal
+          group={groupModal}
+          onClose={() => setGroupModal(null)}
+          onEdit={(item) => { setGroupModal(null); setFeutreModal({ initial: item }); }}
+          onDelete={(item) => { setGroupModal(null); setConfirmDelete(item); }}
+        />
+      )}
+
       {feutreModal && (
         <Modal
           title="Modifier le feutre"

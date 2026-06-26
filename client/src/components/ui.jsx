@@ -99,7 +99,7 @@ export function FeutreCard({ f, onEdit, onDelete }) {
   const brand = BRAND_COLOR[f.marque] || BRAND_COLOR.Autre;
   const etat = ETATS[f.etat] || ETATS.fonctionne;
   return (
-    <div className="feutre-card">
+    <div className="feutre-card" style={{ '--card-accent': brand }}>
       <FeutreCap hex={f.hex} brand={brand} />
       <div className="feutre-num mono">{f.numero || "—"}</div>
       <div className="feutre-info">
@@ -135,6 +135,80 @@ export function FeutreCard({ f, onEdit, onDelete }) {
         </div>
       )}
     </div>
+  );
+}
+
+export function FeutreGroupCard({ group, onOpenGroup }) {
+  const f = group[0];
+  const brand = BRAND_COLOR[f.marque] || BRAND_COLOR.Autre;
+  const visible = group.slice(0, 3);
+  const extra = group.length - 3;
+  return (
+    <div className="feutre-card" style={{ '--card-accent': brand }}>
+      <FeutreCap hex={f.hex} brand={brand} />
+      <div className="feutre-num mono">{f.numero || "—"}</div>
+      <div className="feutre-info">
+        <div className="feutre-marque" style={{ color: brand }}>{f.marque}</div>
+        {f.nom && <div className="feutre-nom">{f.nom}</div>}
+        <div className="feutre-pack-rows">
+          {visible.map((item) => {
+            const etat = ETATS[item.etat] || ETATS.fonctionne;
+            return (
+              <div key={item.id} className="feutre-pack-row">
+                <span className="feutre-pack-row-name">{item.pack || "?"}</span>
+                <div className="feutre-pack-row-right">
+                  {item.quantite > 1 && <Tag color="#7C5CBF">×{item.quantite}</Tag>}
+                  <Tag color={etat.color}>{etat.label}</Tag>
+                </div>
+              </div>
+            );
+          })}
+          {extra > 0 && (
+            <div className="feutre-pack-row-more">+{extra} autre{extra > 1 ? "s" : ""}…</div>
+          )}
+        </div>
+      </div>
+      {onOpenGroup && (
+        <div className="feutre-actions">
+          <IconBtn icon={EditIcon} onClick={() => onOpenGroup(group)} title="Modifier" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function GroupModal({ group, onClose, onEdit, onDelete }) {
+  const f = group[0];
+  const brand = BRAND_COLOR[f.marque] || BRAND_COLOR.Autre;
+  return (
+    <Modal
+      title={`n°${f.numero || "?"} — ${f.marque}${f.nom ? ` (${f.nom})` : ""}`}
+      onClose={onClose}
+      width={480}
+    >
+      <div className="group-modal-list">
+        {group.map((item) => {
+          const etat = ETATS[item.etat] || ETATS.fonctionne;
+          const itemBrand = BRAND_COLOR[item.marque] || BRAND_COLOR.Autre;
+          return (
+            <div key={item.id} className="group-modal-row">
+              <FeutreCap hex={item.hex} brand={itemBrand} size={40} />
+              <div className="group-modal-info">
+                <div className="group-modal-pack">{item.pack || "Pack non renseigné"}</div>
+                <div className="group-modal-tags">
+                  {item.quantite > 1 && <Tag color="#7C5CBF">×{item.quantite}</Tag>}
+                  <Tag color={etat.color}>{etat.label}</Tag>
+                </div>
+              </div>
+              <div className="group-modal-actions">
+                <IconBtn icon={EditIcon} onClick={() => onEdit(item)} title="Modifier" />
+                <IconBtn icon={TrashIcon} onClick={() => onDelete(item)} title="Supprimer" danger />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Modal>
   );
 }
 
