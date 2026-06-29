@@ -4,7 +4,7 @@ import { Plus, Layers, Heart, PenTool, Package, Copy, AlertTriangle, ChevronRigh
 import { useData } from "../context/DataContext.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { BRAND_COLOR, MARQUES_NUMERO_UNIVERSEL } from "../data.js";
-import { FeutreCap, EmptyState, Modal, Spinner } from "../components/ui.jsx";
+import { FeutreCap, EmptyState, Modal, SkeletonCard } from "../components/ui.jsx";
 import { FeutreForm } from "../components/FeutreForm.jsx";
 import { PackForm } from "../components/PackForm.jsx";
 
@@ -64,7 +64,17 @@ export default function DashboardPage() {
   const maxMarque = Math.max(1, ...Object.values(stats.parMarque));
 
   if (loading)
-    return <div className="full-page-loader"><Spinner /></div>;
+    return (
+      <div className="view dash-view">
+        <div className="skeleton sk-hero" />
+        <div className="dash-stat-grid">
+          {Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton sk-stat-card" />)}
+        </div>
+        <div className="feutre-grid">
+          {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      </div>
+    );
 
   async function handleAddFeutre(entries) {
     try {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { Search, Layers, Package, ShoppingCart, ChevronRight, X as XIcon } from "lucide-react";
+import { Search, Layers, Package, ShoppingCart, ChevronRight, X as XIcon, Trash2 } from "lucide-react";
 import { useData } from "../context/DataContext.jsx";
+import { useToast } from "../components/Toast.jsx";
 import { BRAND_COLOR, MARQUES_NUMERO_UNIVERSEL } from "../data.js";
 import { FeutreCard, FeutreGroupCard, GroupModal, EmptyState, Modal } from "../components/ui.jsx";
 import { FeutreForm } from "../components/FeutreForm.jsx";
@@ -59,9 +60,10 @@ function PackCard({ pack, onClick }) {
   );
 }
 
-function PackDetailModal({ pack, onClose, onEditFeutre, onDeleteFeutre }) {
+function PackDetailModal({ pack, onClose, onEditFeutre, onDeleteFeutre, onDeletePack }) {
   const brand = BRAND_COLOR[pack.marque] || BRAND_COLOR.Autre;
   const [groupModal, setGroupModal] = useState(null);
+  const [confirmDeletePack, setConfirmDeletePack] = useState(false);
 
   const grouped = useMemo(() => {
     const map = new Map();
@@ -92,11 +94,16 @@ function PackDetailModal({ pack, onClose, onEditFeutre, onDeleteFeutre }) {
               <Package size={13} />
               {pack.totalUnites} feutre{pack.totalUnites > 1 ? "s" : ""} · {pack.feutres.length} référence{pack.feutres.length > 1 ? "s" : ""}
             </span>
-            {pack.lienAchat && (
-              <a href={pack.lienAchat} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ width: "fit-content", textDecoration: "none" }}>
-                <ShoppingCart size={13} /> Acheter ce pack
-              </a>
-            )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+              {pack.lienAchat && (
+                <a href={pack.lienAchat} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ textDecoration: "none" }}>
+                  <ShoppingCart size={13} /> Acheter ce pack
+                </a>
+              )}
+              <button className="btn btn-danger" onClick={() => setConfirmDeletePack(true)}>
+                <Trash2 size={13} /> Supprimer le pack
+              </button>
+            </div>
           </div>
         </div>
 
@@ -128,12 +135,25 @@ function PackDetailModal({ pack, onClose, onEditFeutre, onDeleteFeutre }) {
           onDelete={(item) => { setGroupModal(null); onDeleteFeutre(item); onClose(); }}
         />
       )}
+
+      {confirmDeletePack && (
+        <Modal title="Supprimer le pack" onClose={() => setConfirmDeletePack(false)} width={420}>
+          <p className="confirm-text">
+            Supprimer définitivement les <strong>{pack.feutres.length} feutre{pack.feutres.length > 1 ? "s" : ""}</strong> du pack <strong>{pack.nom}</strong> ?
+          </p>
+          <div className="modal-actions">
+            <button className="btn btn-ghost" onClick={() => setConfirmDeletePack(false)}>Annuler</button>
+            <button className="btn btn-danger" onClick={() => { onDeletePack(pack); onClose(); }}>Supprimer</button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
 
 export default function PacksPage() {
-  const { feutres, palette, customPacks, customBrands, editFeutre, removeFeutre } = useData();
+  const { feutres, palette, customPacks, customBrands, addFeutre, editFeutre, removeFeutre } = useData();
+  const toast = useToast();
   const [search, setSearch] = useState("");
   const [marqueFilter, setMarqueFilter] = useState("all");
   const [selectedPack, setSelectedPack] = useState(null);
@@ -200,10 +220,30 @@ export default function PacksPage() {
     finally { setFeutreModal(null); }
   }
 
+  async function handleDeletePack(pack) {
+    try {
+      await Promise.all(pack.feutres.map((f) => removeFeutre(f.id)));
+      toast.success(`Pack "${pack.nom}" supprimé (${pack.feutres.length} feutre${pack.feutres.length > 1 ? "s" : ""})`);
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
   async function handleDelete() {
-    try { await removeFeutre(confirmDelete.id); }
-    catch (e) { /* toast handled upstream */ }
-    finally { setConfirmDelete(null); }
+    const snapshot = { ...confirmDelete };
+    setConfirmDelete(null);
+    try {
+      await removeFeutre(snapshot.id);
+      toast.success("Feutre supprimé", {
+        onUndo: async () => {
+          try {
+            const { id, createdAt, ...data } = snapshot;
+            await addFeutre(data);
+            toast.success("Suppression annulée");
+          } catch { toast.error("Impossible de restaurer le feutre"); }
+        },
+      });
+    } catch (e) { toast.error(e.message); }
   }
 
   return (
@@ -281,6 +321,7 @@ export default function PacksPage() {
           onClose={() => setSelectedPack(null)}
           onEditFeutre={(item) => setFeutreModal(item)}
           onDeleteFeutre={(item) => setConfirmDelete(item)}
+          onDeletePack={handleDeletePack}
         />
       )}
 

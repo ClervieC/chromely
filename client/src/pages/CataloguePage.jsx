@@ -199,6 +199,48 @@ function EditLinkModal({ pack, onClose, onSave }) {
   );
 }
 
+function EditPackModal({ pack, customBrands, onClose, onSave }) {
+  const [nom, setNom] = useState(pack.nom || "");
+  const [taille, setTaille] = useState(pack.taille || "");
+  const [detail, setDetail] = useState(pack.detail || "");
+  const [lienAchat, setLienAchat] = useState(pack.lienAchat || "");
+  return (
+    <Modal title={`Modifier — ${pack.nom}`} onClose={onClose} width={500}>
+      <div className="form-grid">
+        <label className="field">
+          <span className="field-label">Nom du pack</span>
+          <input className="input" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex : 360 couleurs" />
+        </label>
+        <div className="field-row">
+          <label className="field" style={{ flex: 1 }}>
+            <span className="field-label">Nb. feutres (opt.)</span>
+            <input type="number" min="1" className="input" value={taille} onChange={(e) => setTaille(e.target.value)} />
+          </label>
+          <label className="field" style={{ flex: 2 }}>
+            <span className="field-label">Détail (opt.)</span>
+            <input className="input" value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="Ex : nouvelle sortie 2026" />
+          </label>
+        </div>
+        <label className="field">
+          <span className="field-label">Lien d'achat (opt.)</span>
+          <input className="input" value={lienAchat} onChange={(e) => setLienAchat(e.target.value)} placeholder="https://..." type="url" />
+        </label>
+      </div>
+      <div className="modal-actions">
+        <button type="button" className="btn btn-ghost" onClick={onClose}>Annuler</button>
+        <button type="button" className="btn btn-primary" disabled={!nom.trim()} onClick={() => onSave({
+          nom: nom.trim(),
+          taille: taille ? Number(taille) : null,
+          detail: detail.trim() || null,
+          lienAchat: lienAchat.trim() || null,
+        })}>
+          Enregistrer
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export default function CataloguePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -295,9 +337,10 @@ export default function CataloguePage() {
     }
   }
 
-  // Édition lien
+  // Édition lien (packs builtin) / édition complète (packs custom)
   const [catalogueLiens, setCatalogueLiens] = useState({});
   const [editLinkModal, setEditLinkModal] = useState(null);
+  const [editPackModal, setEditPackModal] = useState(null);
 
   // Édition couleur
   const [editColorModal, setEditColorModal] = useState(null);
@@ -341,15 +384,22 @@ export default function CataloguePage() {
   }
 
   async function handleSaveLink(lien) {
-    const { pack, isCustom } = editLinkModal;
+    const { pack } = editLinkModal;
     try {
-      if (isCustom) {
-        await updateCustomPack(pack.id, { ...pack, lienAchat: lien });
-      } else {
-        setCatalogueLiens((prev) => ({ ...prev, [`${pack.marque}::${pack.nom}`]: lien }));
-        toast.success("Lien mis à jour (session uniquement)");
-      }
+      setCatalogueLiens((prev) => ({ ...prev, [`${pack.marque}::${pack.nom}`]: lien }));
+      toast.success("Lien mis à jour (session uniquement)");
       setEditLinkModal(null);
+    } catch (e) {
+      toast.error(e.message);
+    }
+  }
+
+  async function handleSavePack(values) {
+    const pack = editPackModal;
+    try {
+      await updateCustomPack(pack.id, { ...pack, ...values });
+      toast.success("Pack mis à jour");
+      setEditPackModal(null);
     } catch (e) {
       toast.error(e.message);
     }
@@ -565,7 +615,10 @@ export default function CataloguePage() {
                         paletteColors={colorsForPack(m, p.nom)}
                         isAdmin={isAdmin}
                         brand={brand}
-                        onEditLink={(pk) => setEditLinkModal({ pack: { ...pk, marque: m }, isCustom: isCustomPack })}
+                        onEditLink={(pk) => isCustomPack
+                          ? setEditPackModal({ ...pk, marque: m })
+                          : setEditLinkModal({ pack: { ...pk, marque: m } })
+                        }
                         onDelete={handleDelete}
                         onEditColor={(c) => setEditColorModal({ ...c, marque: m, pack: p.nom })}
                         onUploadImage={handleUploadImage}
@@ -696,9 +749,17 @@ export default function CataloguePage() {
       {editLinkModal && (
         <EditLinkModal
           pack={editLinkModal.pack}
-          isCustom={editLinkModal.isCustom}
           onClose={() => setEditLinkModal(null)}
           onSave={handleSaveLink}
+        />
+      )}
+
+      {editPackModal && (
+        <EditPackModal
+          pack={editPackModal}
+          customBrands={customBrands}
+          onClose={() => setEditPackModal(null)}
+          onSave={handleSavePack}
         />
       )}
 
@@ -724,7 +785,6 @@ export default function CataloguePage() {
                 value={brandNom}
                 onChange={(e) => setBrandNom(e.target.value)}
                 placeholder="Ex : Copic, Staedtler…"
-                disabled={brandModal.mode === "edit"}
               />
             </label>
             <label className="field">

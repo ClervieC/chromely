@@ -179,13 +179,29 @@ export default function PalettePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [marque]);
 
-  const entries = useMemo(
-    () =>
-      palette
-        .filter((p) => p.marque === marque && p.pack === pack)
-        .sort((a, b) => (a.numero || "").localeCompare(b.numero || "", undefined, { numeric: true })),
-    [palette, marque, pack],
-  );
+  const [sortByHue, setSortByHue] = useState(false);
+
+  function hexToHue(hex) {
+    if (!hex) return 999;
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    if (max === min) return 0;
+    const d = max - min;
+    let h = max === r ? (g - b) / d + (g < b ? 6 : 0)
+           : max === g ? (b - r) / d + 2
+           : (r - g) / d + 4;
+    return h / 6;
+  }
+
+  const entries = useMemo(() => {
+    const base = palette
+      .filter((p) => p.marque === marque && p.pack === pack)
+      .sort((a, b) => (a.numero || "").localeCompare(b.numero || "", undefined, { numeric: true }));
+    if (!sortByHue) return base;
+    return [...base].sort((a, b) => hexToHue(a.hex) - hexToHue(b.hex));
+  }, [palette, marque, pack, sortByHue]);
 
   const [numero, setNumero] = useState("");
   const [nom, setNom] = useState("");
@@ -360,7 +376,13 @@ export default function PalettePage() {
           />
         ) : (
           <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
             <div className="palette-count">{entries.length} couleur{entries.length > 1 ? "s" : ""}</div>
+            <label className="palette-sort-toggle">
+              <input type="checkbox" checked={sortByHue} onChange={(e) => setSortByHue(e.target.checked)} />
+              Trier par teinte
+            </label>
+          </div>
             <div className="swatch-grid">
               {entries.map((p) => (
                 <ColorSwatch

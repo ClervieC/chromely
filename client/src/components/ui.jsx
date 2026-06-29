@@ -98,11 +98,24 @@ export function FeutreCap({ hex, brand, size }) {
   );
 }
 
+export function SkeletonCard() {
+  return (
+    <div className="feutre-card skeleton-card">
+      <div className="skeleton sk-cap" />
+      <div className="skeleton sk-num" />
+      <div className="skeleton sk-line" style={{ width: "60%", marginTop: 8 }} />
+      <div className="skeleton sk-line" style={{ width: "80%", marginTop: 6 }} />
+      <div className="skeleton sk-line" style={{ width: "50%", marginTop: 6 }} />
+    </div>
+  );
+}
+
 export function FeutreCard({ f, onEdit, onDelete }) {
   const brand = BRAND_COLOR[f.marque] || BRAND_COLOR.Autre;
   const etat = ETATS[f.etat] || ETATS.fonctionne;
+  const hexTint = f.hex ? { "--card-hex-tint": `${f.hex}18` } : {};
   return (
-    <div className="feutre-card" style={{ '--card-accent': brand }}>
+    <div className={"feutre-card" + (f.hex ? " feutre-card-tinted" : "")} style={{ '--card-accent': brand, ...hexTint }}>
       <FeutreCap hex={f.hex} brand={brand} />
       <div className="feutre-num mono">{f.numero || "—"}</div>
       <div className="feutre-info">
@@ -113,9 +126,7 @@ export function FeutreCard({ f, onEdit, onDelete }) {
         {f.nom && <div className="feutre-nom">{f.nom}</div>}
         <div className="feutre-tags">
           {f.quantite > 1 && <Tag color="#7C5CBF">×{f.quantite}</Tag>}
-          {f.etat !== "fonctionne" && (
-            <Tag color={etat.color}>{etat.label}</Tag>
-          )}
+          <Tag color={etat.color}>{etat.label}</Tag>
         </div>
       </div>
       {(onEdit || onDelete) && (

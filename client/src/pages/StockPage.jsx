@@ -138,20 +138,30 @@ export default function StockPage() {
       if (incremented) parts.push(`${incremented} doublon${incremented > 1 ? "s" : ""} mis à jour`);
       toast.success(parts.join(" · ") || "Pack traité");
       setPackModalOpen(false);
-      setFilters({ q: values.pack, marque: values.marque, etat: "all", sort: "numero" });
     } catch (e) {
       toast.error(e.message);
     }
   }
 
   async function handleDelete() {
+    const target = confirmDelete;
+    setConfirmDelete(null);
+    const snapshot = { ...target };
     try {
-      await removeFeutre(confirmDelete.id);
-      toast.success("Feutre supprimé");
+      await removeFeutre(target.id);
+      toast.success("Feutre supprimé", {
+        onUndo: async () => {
+          try {
+            const { id, createdAt, ...data } = snapshot;
+            await addFeutre(data);
+            toast.success("Suppression annulée");
+          } catch (e) {
+            toast.error("Impossible de restaurer le feutre");
+          }
+        },
+      });
     } catch (e) {
       toast.error(e.message);
-    } finally {
-      setConfirmDelete(null);
     }
   }
 
